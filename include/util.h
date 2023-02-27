@@ -91,13 +91,13 @@ static __always_inline uint64_t rdtsc()
  */
 static void flush_data(void *addr, size_t len)
 {
-#ifndef NO_CACHELINE_FLUSH
+// #ifndef NO_CACHELINE_FLUSH
 	char *end = (char *)(addr) + len;
 	char *ptr = (char *)((unsigned long)addr & ~(CACHE_ALIGN - 1));
 	for (; ptr < end; ptr += CACHE_ALIGN)
 		asm_clwb(ptr);
 	asm_mfence();
-#endif
+// #endif
 }
 static void flush_data_eADR(void *addr, size_t len)
 {

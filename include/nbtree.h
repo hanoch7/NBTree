@@ -20,6 +20,7 @@
 #include <tbb/spin_rw_mutex.h>
 #include "util.h"
 #include "timer.h"
+#include "../nvm_mgr/threadinfo.h"
 #define eADR
 #define NVM
 #define CACHE_LINE 64
@@ -47,14 +48,17 @@ extern __thread char *curr_mem;
 
 typedef tbb::speculative_spin_rw_mutex speculative_lock_t;
 typedef speculative_lock_t::scoped_lock htm_lock;
-using namespace std;
+// using namespace std;
 
 void *data_alloc(size_t size)
 {
-  void *ret = curr_addr;
-  curr_addr += size;
-
-  return ret;
+    #ifdef USE_NVM_MALLOC
+			void *ret = NVMMgr_ns::alloc_new_node_from_size(size);
+	  #else
+      void *ret = curr_addr;
+      curr_addr += size;
+    #endif
+    return ret;
 }
 
 void *leaf_alloc(size_t size)
@@ -522,6 +526,7 @@ public:
       }
       return NULL;
     }
+    
 
     // 2. Check if the leaf is correct
     if (key >= hdr.high_key)

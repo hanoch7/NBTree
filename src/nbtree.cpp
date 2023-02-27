@@ -20,6 +20,10 @@
 #endif
 #endif
 
+#ifdef USE_NVM_MALLOC
+#include "../nvm_mgr/nvm_mgr.h"
+#endif
+
 char *thread_space_start_addr;
 __thread char *start_addr;
 __thread char *curr_addr;
@@ -131,17 +135,20 @@ public:
 	{
 		long long lat;
 		nsTimer clk;
-		start_addr = thread_space_start_addr + workerid * SPACE_PER_THREAD;
-		curr_addr = start_addr;
 		start_mem = thread_mem_start_addr + workerid * MEM_PER_THREAD;
 		curr_mem = start_mem;
-
 		Benchmark *benchmark = getBenchmark(conf, workerid);
-		if (conf.benchmark == INSERT_ONLY || conf.benchmark == UPSERT)
-		{
-			memset(start_addr, 0, SPACE_PER_THREAD);
-			clear_cache();
-		}
+		#ifdef USE_NVM_MALLOC
+			NVMMgr_ns::register_threadinfo();
+		#else // TODO: 代码逻辑
+			start_addr = thread_space_start_addr + workerid * SPACE_PER_THREAD;
+			curr_addr = start_addr;
+			if (conf.benchmark == INSERT_ONLY || conf.benchmark == UPSERT)
+			{
+				memset(start_addr, 0, SPACE_PER_THREAD);
+				clear_cache();
+			}
+		#endif
 
 		stick_this_thread_to_core(workerid * 2 + 1);
 		printf("[WORKER]\thello, I am worker %d\n", workerid);
@@ -179,10 +186,17 @@ public:
 		#endif
 			result->throughput++;
 		}
+		#ifdef USE_NVM_MALLOC
+			NVMMgr_ns::unregister_threadinfo();
+		#endif
 	}
 
 	void run()
 	{
+#ifdef USE_NVM_MALLOC
+		NVMMgr_ns::init_nvm_mgr();
+		NVMMgr_ns::register_threadinfo();
+#else
 		// Create memory pool
 		int fd = open("/mnt/pmem1/btree", O_RDWR);
 		if (fd < 0)
@@ -200,6 +214,7 @@ public:
 		start_addr = (char *)pmem;
 		curr_addr = start_addr;
 		thread_space_start_addr = (char *)pmem + SPACE_OF_MAIN_THREAD;
+#endif
 		void *mem = new char[allocate_mem];
 		start_mem = (char *)mem;
 		curr_mem = start_mem;
@@ -256,7 +271,10 @@ public:
 		}
 		print_taillatency(final_result.lat, final_result.throughput, "total");
 #endif
-
+#ifdef USE_NVM_MALLOC
+		NVMMgr_ns::unregister_threadinfo();
+		NVMMgr_ns::close_nvm_mgr();
+#endif
 		delete tree;
 		delete[] pid;
 		delete[] results;

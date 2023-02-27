@@ -16,7 +16,7 @@
 #include <time.h>
 #include <unistd.h>
 #include <vector>
-
+#include "../nvm_mgr/threadinfo.h"
 #include <tbb/spin_rw_mutex.h>
 #include "util.h"
 #include "timer.h"
@@ -51,10 +51,13 @@ using namespace std;
 
 void *data_alloc(size_t size)
 {
-  void *ret = curr_addr;
-  curr_addr += size;
-
-  return ret;
+    #ifdef USE_NVM_MALLOC
+			void *ret = NVMMgr_ns::alloc_new_node_from_size(size);
+	  #else
+      void *ret = curr_addr;
+      curr_addr += size;
+    #endif
+    return ret;
 }
 
 void *leaf_alloc(size_t size)

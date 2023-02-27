@@ -11,10 +11,14 @@ link_libraries(boost_system boost_thread pthread pmemobj pmem)
 
 include_directories("third-party-lib")
 include_directories("include")
+include_directories("nvm_mgr")
 
 add_executable(nbtree
 	src/nbtree.cpp
 	src/util.cpp
+	nvm_mgr/Epoch.cpp
+	nvm_mgr/nvm_mgr.cpp
+	nvm_mgr/threadinfo.cpp
 )
 
 # add_executable(data_generator
