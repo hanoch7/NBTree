@@ -83,7 +83,7 @@ uint64_t buddy_allocator::get_addr(int id) { // 根据id从free_list中取addr
             thread_info *ti = (thread_info *)get_threadinfo();
             addr = (uint64_t)pmb->alloc_block(ti->id);
             // std::cout << "get addr" << addr << "\n";
-            for (int i = power_two[id]; i < NVMMgr::SPACE_PER_THREAD; // TODO 逻辑理清
+            for (int i = power_two[id]; i < NVMMgr::PGSIZE;
                  i += power_two[id]) {
                 free_list[id].push(addr + (uint64_t)i);
             }

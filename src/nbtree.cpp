@@ -21,7 +21,7 @@
 #endif
 
 #ifdef USE_NVM_MALLOC
-#include "../nvm_mgr/nvm_mgr.h"
+#include "nvm_mgr.h"
 #endif
 
 char *thread_space_start_addr;

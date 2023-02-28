@@ -76,20 +76,20 @@ NVMMgr::NVMMgr() {
     if (initial) {
         // set status of head and set zero for bitmap
         // persist it
-        memset((void *)meta_data, 0, SPACE_OF_MAIN_THREAD);
+        memset((void *)meta_data, 0, PGSIZE);
 
         meta_data->status = magic_number;
         meta_data->threads = 0;
         meta_data->free_bit_offset = 0;
         meta_data->generation_version = 0;
 
-        flush_data((void *)meta_data, SPACE_OF_MAIN_THREAD);
+        flush_data((void *)meta_data, PGSIZE);
         printf("[NVM MGR]\tinitialize nvm file's head\n");
     } else {
         meta_data->generation_version++;
         flush_data((void *)&meta_data->generation_version, sizeof(uint64_t));
-        printf("nvm mgr restart, the free offset is %lld, generation version "
-               "is %lld\n",
+        printf("nvm mgr restart, the free offset is %ld, generation version "
+               "is %ld\n",
                meta_data->free_bit_offset, meta_data->generation_version);
     }
 }
@@ -107,11 +107,11 @@ void *NVMMgr::alloc_thread_info() {
     // not thread safe
     size_t index = meta_data->threads++;
     flush_data((void *)&(meta_data->threads), sizeof(int));
-    return (void *)(thread_local_start + index * SPACE_PER_THREAD);
+    return (void *)(thread_local_start + index * PGSIZE);
 }
 
 void *NVMMgr::get_thread_info(int tid) {
-    return (void *)(thread_local_start + tid * SPACE_PER_THREAD);
+    return (void *)(thread_local_start + tid * PGSIZE);
 }
 
 void *NVMMgr::alloc_block(int tid) {
@@ -124,12 +124,12 @@ void *NVMMgr::alloc_block(int tid) {
     flush_data((void *)&(meta_data->free_bit_offset), sizeof(uint64_t));
 
 
-    void *addr = (void *)(data_block_start + id * SPACE_PER_THREAD);
+    void *addr = (void *)(data_block_start + id * PGSIZE);
 
     // printf("[NVM MGR]\talloc a new block %d, type is %d\n", id, type);
-    std::cout<<"alloc a new block "<< meta_data->free_bit_offset<<"\n";
-    std::cout<<"meta data addr "<< meta_data<<"\n";
-    std::cout<<"mgr addr" <<this<<"\n";
+    // std::cout<<"alloc a new block "<< meta_data->free_bit_offset<<"\n";
+    // std::cout<<"meta data addr "<< meta_data<<"\n";
+    // std::cout<<"mgr addr" <<this<<"\n";
 
     return addr;
 }
@@ -164,10 +164,10 @@ void NVMMgr::recovery_free_memory(int forward_thread) {
                 uint64_t end = (id + 1) * per_thread_block;
                 //                std::cout << "start " << start
                 //                          << " end " << end<<"\n";
-                uint64_t start_addr = data_block_start + start * SPACE_PER_THREAD;
+                uint64_t start_addr = data_block_start + start * PGSIZE;
                 uint64_t end_addr = std::min(
-                    data_block_start + end * SPACE_PER_THREAD,
-                    data_block_start + meta_data->free_bit_offset * SPACE_PER_THREAD);
+                    data_block_start + end * PGSIZE,
+                    data_block_start + meta_data->free_bit_offset * PGSIZE);
                 //                std::set<std::pair<uint64_t, size_t>>
                 //                    recovery_set; // used for memory recovery
                 std::vector<std::pair<uint64_t, size_t>> recovery_set;
@@ -231,7 +231,7 @@ NVMMgr *get_nvm_mgr() {
 }
 
 bool init_nvm_mgr() {
-    system((std::string("rm -rf ") + nvm_dir + "part.data").c_str()); //TODO: fix
+    int tag = system((std::string("rm -rf ") + nvm_dir + "part.data").c_str());
     std::lock_guard<std::mutex> lock(_mtx);
 
     if (nvm_mgr) {

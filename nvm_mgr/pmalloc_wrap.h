@@ -10,8 +10,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define USE_NVM_MALLOC
-
 namespace NVMMgr_ns {
 
 class PMBlockAllocator {

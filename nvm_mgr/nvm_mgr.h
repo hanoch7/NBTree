@@ -11,7 +11,7 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 
-inline const char *nvm_dir = "/mnt/pmem1/";
+static const char *nvm_dir = "/mnt/pmem1/";
 
 namespace NVMMgr_ns {
 
@@ -47,17 +47,19 @@ class NVMMgr {
      */
   public:
     static const int magic_number = 12345;
-    static const int max_threads = 64; // 是否需要大一点
+    static const int max_threads = 64;
 
-    static const uint64_t SPACE_PER_THREAD = 512ULL * 1024ULL * 1024ULL;
-    static const uint64_t SPACE_OF_MAIN_THREAD = 1ULL * 1024ULL * 1024ULL * 1024ULL;
+    // static const uint64_t SPACE_PER_THREAD = 512ULL * 1024ULL * 1024ULL;
+    // static const uint64_t SPACE_OF_MAIN_THREAD = 1ULL * 1024ULL * 1024ULL * 1024ULL;
     
+    static const int PGSIZE = 256 * 1024;                     // 256K
+
     static const uint64_t allocate_size = 113ULL * 1024ULL * 1024ULL * 1024ULL; // 256GB
 
     static const size_t start_addr = 0x50000000;
-    static const size_t thread_local_start = start_addr + SPACE_OF_MAIN_THREAD;
+    static const size_t thread_local_start = start_addr + PGSIZE;
     static const size_t data_block_start =
-        thread_local_start + SPACE_PER_THREAD * max_threads;
+        thread_local_start + PGSIZE * max_threads;
 
     static const char *get_filename() {
         static const std::string filename = std::string(nvm_dir) + "part.data";
@@ -65,7 +67,6 @@ class NVMMgr {
     }
 
     struct Head {
-        // TODO: some other meta data for recovery
         char root[4096]; // for root
         uint64_t generation_version;
         uint64_t free_bit_offset;
