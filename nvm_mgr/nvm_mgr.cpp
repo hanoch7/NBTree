@@ -76,6 +76,7 @@ NVMMgr::NVMMgr() {
     if (initial) {
         // set status of head and set zero for bitmap
         // persist it
+        std::cout<< "addr of meta_data: " << meta_data << "\n";
         memset((void *)meta_data, 0, PGSIZE);
 
         meta_data->status = magic_number;
@@ -92,6 +93,26 @@ NVMMgr::NVMMgr() {
                "is %ld\n",
                meta_data->free_bit_offset, meta_data->generation_version);
     }
+
+    // initialize bitmap
+    bitmap = static_cast<std::bitset<bitmap_size> *>(addr+PGSIZE);
+    std::bitset<bitmap_size> *tmp_bitmap;
+    tmp_bitmap = new std::bitset<bitmap_size>;
+    if (initial) {
+        std::cout<< "addr of bitmap: " << bitmap << "\n";
+        memcpy(bitmap,tmp_bitmap,sizeof(std::bitset<bitmap_size>));
+        flush_data((void *)bitmap, sizeof(std::bitset<bitmap_size>));
+        std::cout << sizeof(std::bitset<bitmap_size>) << "\n";
+        std::cout << bitmap_size << "\n";
+        std::cout << bitmap_size / sizeof(std::bitset<bitmap_size>) << "\n";
+        // std::cout << bitmap->test(0) << "\n";
+        // bitmap->set(0);
+        // std::cout << bitmap->test(0) << "\n";
+    } else {
+        // TODO
+    }
+    delete tmp_bitmap;
+
 }
 
 NVMMgr::~NVMMgr() {
@@ -132,6 +153,22 @@ void *NVMMgr::alloc_block(int tid) {
     // std::cout<<"mgr addr" <<this<<"\n";
 
     return addr;
+}
+
+void NVMMgr::set_bitmap(void *addr) {
+    long offset = (long)addr - data_block_start;
+    bitmap->set(offset/512); // TODO 512
+    // std::cout << "set" << offset/512 << "\n";
+    // std::chrono::milliseconds duration(100);
+    // std::this_thread::sleep_for(duration);
+}
+
+void NVMMgr::reset_bitmap(void *addr) {
+    long offset = (long)addr - data_block_start;
+    bitmap->reset(offset/512); // TODO 512
+    // std::cout << "reset" << offset/512 << "\n";
+    // std::chrono::milliseconds duration(100);
+    // std::this_thread::sleep_for(duration);
 }
 
 // TODO

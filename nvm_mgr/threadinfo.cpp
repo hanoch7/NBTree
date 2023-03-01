@@ -77,7 +77,7 @@ void buddy_allocator::insert_into_freelist(uint64_t addr, size_t size) {
 
 uint64_t buddy_allocator::get_addr(int id) { // 根据id从free_list中取addr
     uint64_t addr;
-    if (id == free_list_number - 1) {
+    // if (id == free_list_number - 4) { //TODO 目前只有512
         if (!free_list[id].try_pop(addr)) {
             // empty, allocate block from nvm_mgr
             thread_info *ti = (thread_info *)get_threadinfo();
@@ -88,18 +88,19 @@ uint64_t buddy_allocator::get_addr(int id) { // 根据id从free_list中取addr
                 free_list[id].push(addr + (uint64_t)i);
             }
         }
+        // std::cout << "free_list size of "<< id << " : " << get_freelist_size(id) << "\n";
         return addr;
-    }
+    // }
 
-    // pop successfully
-    if (free_list[id].try_pop(addr)) {
-        return addr;
-    } else { // empty
-        addr = get_addr(id + 1);
-        // get a bigger page and splitAndUnlock half into free_list
-        free_list[id].push(addr + power_two[id]);
-        return addr;
-    }
+    // // pop successfully
+    // if (free_list[id].try_pop(addr)) {
+    //     return addr;
+    // } else { // empty
+    //     addr = get_addr(id + 1);
+    //     // get a bigger page and splitAndUnlock half into free_list
+    //     free_list[id].push(addr + power_two[id]);
+    //     return addr;
+    // }
 }
 
 // alloc size smaller than 4k
@@ -111,7 +112,9 @@ void *buddy_allocator::alloc_node(size_t size) {
             break;
         }
     }
-    return (void *)get_addr(id);
+    void *addr = (void *)get_addr(id);
+    pmb->set_bitmap(addr);
+    return addr;
 }
 
 size_t buddy_allocator::get_power_two_size(size_t s) {

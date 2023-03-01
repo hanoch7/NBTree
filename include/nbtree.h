@@ -20,7 +20,7 @@
 #include <tbb/spin_rw_mutex.h>
 #include "util.h"
 #include "timer.h"
-#include "../nvm_mgr/threadinfo.h"
+#include "threadinfo.h"
 #define eADR
 #define NVM
 #define CACHE_LINE 64

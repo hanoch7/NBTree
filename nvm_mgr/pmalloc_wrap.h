@@ -35,6 +35,15 @@ class PMBlockAllocator {
     void free_block(void *block) {
         // TODO: free block
     }
+
+    void set_bitmap(void *addr) {
+        return mgr->set_bitmap(addr);
+    }
+
+    void unset_bitmap(void *addr) {
+        return mgr->reset_bitmap(addr);
+    }
+
 } __attribute__((aligned(64)));
 
 } // namespace NVMMgr_ns

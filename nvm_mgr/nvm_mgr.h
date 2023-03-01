@@ -10,6 +10,7 @@
 #include <string>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <bitset>
 
 static const char *nvm_dir = "/mnt/pmem1/";
 
@@ -48,16 +49,15 @@ class NVMMgr {
   public:
     static const int magic_number = 12345;
     static const int max_threads = 64;
-
-    // static const uint64_t SPACE_PER_THREAD = 512ULL * 1024ULL * 1024ULL;
-    // static const uint64_t SPACE_OF_MAIN_THREAD = 1ULL * 1024ULL * 1024ULL * 1024ULL;
     
     static const int PGSIZE = 256 * 1024;                     // 256K
 
-    static const uint64_t allocate_size = 113ULL * 1024ULL * 1024ULL * 1024ULL; // 256GB
+    static const uint64_t allocate_size = 1024ULL * 1024 * PGSIZE; // 256GB
+    static const uint64_t bitmap_size = allocate_size / 512; // TODO: fix 512
 
     static const size_t start_addr = 0x50000000;
-    static const size_t thread_local_start = start_addr + PGSIZE;
+    static const size_t bitmap_addr = start_addr + PGSIZE; // addr of bitmap
+    static const size_t thread_local_start = bitmap_addr + bitmap_size / 8;
     static const size_t data_block_start =
         thread_local_start + PGSIZE * max_threads;
 
@@ -95,12 +95,19 @@ class NVMMgr {
 
     uint64_t get_generation_version() { return meta_data->generation_version; }
 
+    void set_bitmap(void *addr);
+
+    void reset_bitmap(void *addr);
+
     // volatile metadata and rebuild when recovery
     int fd;
     bool first_created;
 
     // persist it as the head of nvm region
     Head *meta_data;
+
+    // persist of bitmap
+    std::bitset<bitmap_size> *bitmap;
 } __attribute__((aligned(64)));
 
 NVMMgr *get_nvm_mgr();
