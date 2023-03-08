@@ -58,8 +58,7 @@ class NVMMgr {
     static const size_t start_addr = 0x50000000;
     static const size_t bitmap_addr = start_addr + PGSIZE; // addr of bitmap
     static const size_t thread_local_start = bitmap_addr + bitmap_size / 8;
-    static const size_t data_block_start =
-        thread_local_start + PGSIZE * max_threads;
+    static const size_t data_block_start = thread_local_start + 2 * PGSIZE * max_threads; // 一个PGSIZE存ti，一个PGSIZE存cicle_garbage
 
     static const char *get_filename() {
         static const std::string filename = std::string(nvm_dir) + "part.data";

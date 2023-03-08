@@ -23,6 +23,9 @@ thread_info *ti_list_head = nullptr;
 // thread local info
 __thread thread_info *ti = nullptr; // 每个线程一个实例
 
+// thread local ciclequeue
+__thread cicle_garbage *cg = nullptr;
+
 // global thread id
 int tid = 0;
 
@@ -113,7 +116,7 @@ void *buddy_allocator::alloc_node(size_t size) {
         }
     }
     void *addr = (void *)get_addr(id);
-    pmb->set_bitmap(addr);
+    // pmb->set_bitmap(addr);
     return addr;
 }
 
@@ -157,6 +160,9 @@ thread_info::~thread_info() {
 }
 
 void thread_info::AddGarbageNode(void *node_p) {
+    if (cg->enqueue(node_p)) {
+        return;
+    }
     GarbageNode *garbage_node_p =
         new GarbageNode(Epoch_Mgr::GetGlobalEpoch(), node_p);
     assert(garbage_node_p != nullptr);
@@ -246,8 +252,12 @@ void *alloc_new_node_from_size(size_t size) {
 //         dcmm_time = new cpuCycleTimer();
 //     dcmm_time->start();
 // #endif
+    void *addr = cg->dequeue(); // TODO: size
+    if (addr != nullptr) {
+        return addr;
+    }
 
-    void *addr = ti->free_list->alloc_node(size);
+    addr = ti->free_list->alloc_node(size);
     return addr;
 }
 
@@ -286,15 +296,25 @@ void register_threadinfo() {
         NVMMgr *mgr = get_nvm_mgr();
         // std::cout << "[THREAD]\tin thread get mgr meta data addr" << mgr->meta_data << "\n";
 
-        ti = new (mgr->alloc_thread_info()) thread_info();
+        void *addr = mgr->alloc_thread_info();
+        ti = new (addr) thread_info();
         std::cout << "[THREAD]\tthreadinfo " << ti << "\n";
         ti->next = ti_list_head;
         ti_list_head = ti;
 
         // persist thread info
-        flush_data((void *)ti, 128);
+        flush_data((void *)ti, NVMMgr::PGSIZE);
+
+        void *cg_addr =addr+NVMMgr::PGSIZE;
+        cg = new (cg_addr) cicle_garbage(10, cg_addr); // TODO size
+        // std::cout << "addr of cg: "<< cg << "\n";
+        // std::cout << "size of cg: "<< sizeof(cicle_garbage) << "\n";
+        // std::cout << "addr of queue: "<< cg->m_queueArr << "\n";
+        flush_data((void *)cg, NVMMgr::PGSIZE);
+
         std::cout << "[THREAD]\talloc thread info " << ti->id << "\n";
     }
+
 }
 
 void unregister_threadinfo() {
@@ -315,8 +335,9 @@ void unregister_threadinfo() {
         }
     }
     std::cout << "[THREAD]\tunregister thread\n";
-    //    delete ti;
+    // delete ti;
     ti = nullptr;
+    cg = nullptr;
     if (ti_list_head == nullptr) {
         // reset all, only use for gtest
         delete epoch_mgr;

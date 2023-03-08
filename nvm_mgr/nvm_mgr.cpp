@@ -95,12 +95,12 @@ NVMMgr::NVMMgr() {
     }
 
     // initialize bitmap
-    bitmap = static_cast<std::bitset<bitmap_size> *>(addr+PGSIZE);
-    std::bitset<bitmap_size> *tmp_bitmap;
-    tmp_bitmap = new std::bitset<bitmap_size>;
+    // bitmap = static_cast<std::bitset<bitmap_size> *>(addr+PGSIZE);
+    // std::bitset<bitmap_size> *tmp_bitmap;
     if (initial) {
+        bitmap = new ((void *)bitmap_addr) std::bitset<bitmap_size>;
         std::cout<< "addr of bitmap: " << bitmap << "\n";
-        memcpy(bitmap,tmp_bitmap,sizeof(std::bitset<bitmap_size>));
+        // memcpy(bitmap,tmp_bitmap,sizeof(std::bitset<bitmap_size>));
         flush_data((void *)bitmap, sizeof(std::bitset<bitmap_size>));
         std::cout << sizeof(std::bitset<bitmap_size>) << "\n";
         std::cout << bitmap_size << "\n";
@@ -111,7 +111,7 @@ NVMMgr::NVMMgr() {
     } else {
         // TODO
     }
-    delete tmp_bitmap;
+    // delete tmp_bitmap;
 
 }
 
@@ -128,11 +128,11 @@ void *NVMMgr::alloc_thread_info() {
     // not thread safe
     size_t index = meta_data->threads++;
     flush_data((void *)&(meta_data->threads), sizeof(int));
-    return (void *)(thread_local_start + index * PGSIZE);
+    return (void *)(thread_local_start + 2 * index * PGSIZE);
 }
 
 void *NVMMgr::get_thread_info(int tid) {
-    return (void *)(thread_local_start + tid * PGSIZE);
+    return (void *)(thread_local_start + 2 * tid * PGSIZE);
 }
 
 void *NVMMgr::alloc_block(int tid) {
@@ -141,8 +141,8 @@ void *NVMMgr::alloc_block(int tid) {
     uint64_t id = meta_data->free_bit_offset;
     meta_data->free_bit_offset++;
     meta_data->bitmap[id] = tid;
-    flush_data((void *)&(meta_data->bitmap[id]), sizeof(uint8_t));
-    flush_data((void *)&(meta_data->free_bit_offset), sizeof(uint64_t));
+    // flush_data((void *)&(meta_data->bitmap[id]), sizeof(uint8_t));
+    // flush_data((void *)&(meta_data->free_bit_offset), sizeof(uint64_t));
 
 
     void *addr = (void *)(data_block_start + id * PGSIZE);

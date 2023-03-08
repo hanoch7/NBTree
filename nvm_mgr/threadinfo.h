@@ -13,26 +13,6 @@
 #include <list>
 
 namespace NVMMgr_ns {
-/*
- * Persistent leaf management
- */
-
-/*
- * fixed length allocator
- */
-// class PMFreeList {
-//    std::list<uint64_t> free_node_list;
-//    PMBlockAllocator *pmb;
-//
-//  public:
-//    PMFreeList(PMBlockAllocator *pmb_);
-//    ~PMFreeList() {}
-//
-//    void *alloc_node(PART_ns::NTypes nt);
-//    void free_node(void *addr);
-//
-//    int get_freelist_size() { return free_node_list.size(); }
-//} __attribute__((aligned(64)));
 
 const static int free_list_number = 10; // from 8byte to 4K
 // maintain free memory like buddy system in linux
@@ -61,15 +41,6 @@ class thread_info {
     int id;
     volatile int _lock;
     thread_info *next;
-
-    //    // fixed length free list
-    //    PMFreeList *node4_free_list;
-    //    PMFreeList *node16_free_list;
-    //    PMFreeList *node48_free_list;
-    //    PMFreeList *node256_free_list;
-    //    PMFreeList *leaf_free_list;
-
-    // variable length free list
     buddy_allocator *free_list;
 
     // epoch based GC metadata
@@ -148,6 +119,109 @@ size_t convert_power_two(size_t s);
 void *alloc_new_node_from_size(size_t size);
 // void free_node_from_type(uint64_t addr, PART_ns::NTypes type);
 void free_node_from_size(uint64_t addr, size_t size);
+
+struct garbage_info {
+  void *addr;
+  uint64_t epoch;
+  garbage_info():addr(nullptr),epoch(-1){}
+  garbage_info(void *a, uint64_t e):addr(a),epoch(e){}
+};
+
+
+class cicle_garbage
+{
+    public:
+		int max_size;
+		int front;
+		int end;
+		garbage_info *m_queueArr;
+		
+    public:
+  	cicle_garbage(int maxSize, void *addr)
+	{
+	    max_size = maxSize;
+	    front = 0;
+	    end = 0;
+      	m_queueArr = new (addr+sizeof(cicle_garbage)) garbage_info[max_size];
+	    // memset(m_queueArr, 0 , sizeof(garbage_info)*max_size);
+	}
+		
+	~cicle_garbage()
+	{
+	    delete m_queueArr;
+	    m_queueArr = nullptr;
+	}
+ 
+	bool enqueue(void *addr)
+	{
+	    if(isfull())
+	    {
+		std::cout<<"Queue is full!"<<"\n";
+		return false;
+	    }
+ 
+	    m_queueArr[end] = garbage_info(addr, Epoch_Mgr::GetGlobalEpoch());
+	    end = (end + 1)%max_size;
+		return true;
+	}
+ 
+	void* dequeue()
+	{
+	    if(isempty())
+	    {
+		// std::cout<<"Queue is empty!"<<std::endl;
+		return nullptr;
+	    }
+			
+    	// m_queueArr[front] = NULL; //模拟出队列动作
+		garbage_info *tmp = &m_queueArr[front];
+	    front = (front + 1)%max_size;
+		return tmp->addr;
+	}
+
+	bool isfull()
+	{
+	    if(max_size == -1)
+	    {
+		std::cout<<"Create queue error!"<<std::endl;
+		return false;
+	    }
+	    return (end + 1)%max_size == front;
+	}
+ 
+	bool isempty()
+	{
+	    if(max_size == -1)
+	    {
+		std::cout<<"Create queue error!"<<std::endl;
+		return false;
+	    }
+	    return end == front;
+	}
+ 
+	int size()
+	{
+	    return (end - front + max_size) % max_size;
+	}
+
+	// void showqueue()
+	// {
+	//     // if(isempty())
+	//     // {
+	// 	// return;
+	//     // }
+ 
+	//     // for(int i = front; i < front + size(); i++ )
+	//     // {
+	// 	// 	std::cout <<m_queueArr[i]<<" "<<std::endl;
+	//     // }
+	// }
+
+	// void showqueuefront()
+	// {
+	//     	// std::cout <<m_queueArr[front]<<std::endl;
+	// }
+};
 
 } // namespace NVMMgr_ns
 #endif
