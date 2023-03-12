@@ -20,6 +20,7 @@
 #endif
 #endif
 
+// #define USE_NVM_MALLOC
 #ifdef USE_NVM_MALLOC
 #include "nvm_mgr.h"
 #endif
