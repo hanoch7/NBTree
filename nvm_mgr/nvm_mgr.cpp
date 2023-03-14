@@ -136,13 +136,13 @@ void *NVMMgr::get_thread_info(int tid) {
 }
 
 void *NVMMgr::alloc_block(int tid) {
-    // uint64_t id = __sync_fetch_and_add(&meta_data->free_bit_offset, 1);
+    uint64_t id = __sync_fetch_and_add(&meta_data->free_bit_offset, 1);
     // // std::cout << "id: " << id << "\n";
 
-    std::lock_guard<std::mutex> lock(_mtx);
+    // std::lock_guard<std::mutex> lock(_mtx);
 
-    uint64_t id = meta_data->free_bit_offset;
-    meta_data->free_bit_offset++;
+    // uint64_t id = meta_data->free_bit_offset;
+    // meta_data->free_bit_offset++;
     meta_data->bitmap[id] = tid;
     // flush_data((void *)&(meta_data->bitmap[id]), sizeof(uint8_t));
     // flush_data((void *)&(meta_data->free_bit_offset), sizeof(uint64_t));
