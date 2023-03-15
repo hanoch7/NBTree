@@ -1184,7 +1184,7 @@ leaf_node_t *btree::SplitLeaf(leaf_node_t *leaf, inner_node_t *parent, leaf_node
   // 4. update the parent
   update_parent(leaf, parent);
 
-  // 
+  // leaf->data
 
   leaf_node_t *inserted_leaf = leaf->log;
   if (key != 0)
