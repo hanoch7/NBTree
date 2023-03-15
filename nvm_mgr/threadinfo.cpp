@@ -78,20 +78,20 @@ void buddy_allocator::insert_into_freelist(uint64_t addr, size_t size) {
     assert(curr_size == 0);
 }
 
-uint64_t buddy_allocator::get_addr(int id) { // 根据id从free_list中取addr
+uint64_t buddy_allocator::get_addr() { // 根据id从free_list中取addr //
     uint64_t addr;
     // if (id == free_list_number - 4) { //TODO 目前只有512
-        if (!free_list[id].try_pop(addr)) {
+        if (curr_addr == end_addr) {
             // empty, allocate block from nvm_mgr
             thread_info *ti = (thread_info *)get_threadinfo();
-            addr = (uint64_t)pmb->alloc_block(ti->id);
+            curr_addr = (uint64_t)pmb->alloc_block(ti->id);
             // std::cout << "get addr" << addr << "\n";
-            for (int i = power_two[id]; i < NVMMgr::PGSIZE;
-                 i += power_two[id]) {
-                free_list[id].push(addr + (uint64_t)i);
-            }
+            end_addr = curr_addr + NVMMgr::PGSIZE;
         }
+        addr = curr_addr;
+        curr_addr += 512;
         // std::cout << "free_list size of "<< id << " : " << get_freelist_size(id) << "\n";
+        // std::cout<< addr << "\n";
         return addr;
     // }
 
@@ -107,16 +107,16 @@ uint64_t buddy_allocator::get_addr(int id) { // 根据id从free_list中取addr
 }
 
 // alloc size smaller than 4k
-void *buddy_allocator::alloc_node(size_t size) {
-    int id;
-    for (int i = 0; i < free_list_number; i++) {
-        if (power_two[i] >= size) {
-            id = i;
-            break;
-        }
-    }
-    void *addr = (void *)get_addr(id);
-    // pmb->set_bitmap(addr);
+void *buddy_allocator::alloc_node(size_t size) { // size = 512
+    // int id;
+    // for (int i = 0; i < free_list_number; i++) {
+    //     if (power_two[i] >= size) {
+    //         id = i;
+    //         break;
+    //     }
+    // }
+    void *addr = (void *)get_addr();
+    pmb->set_bitmap(addr);
     return addr;
 }
 
@@ -303,14 +303,14 @@ void register_threadinfo() {
         ti_list_head = ti;
 
         // persist thread info
-        flush_data((void *)ti, NVMMgr::PGSIZE);
+        // flush_data((void *)ti, NVMMgr::PGSIZE);
 
         void *cg_addr =addr+NVMMgr::PGSIZE;
         cg = new (cg_addr) cicle_garbage(10, cg_addr); // TODO size
         // std::cout << "addr of cg: "<< cg << "\n";
         // std::cout << "size of cg: "<< sizeof(cicle_garbage) << "\n";
         // std::cout << "addr of queue: "<< cg->m_queueArr << "\n";
-        flush_data((void *)cg, NVMMgr::PGSIZE);
+        // flush_data((void *)cg, NVMMgr::PGSIZE);
 
         std::cout << "[THREAD]\talloc thread info " << ti->id << "\n";
     }

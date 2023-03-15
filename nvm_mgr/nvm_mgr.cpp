@@ -84,11 +84,11 @@ NVMMgr::NVMMgr() {
         meta_data->free_bit_offset = 0;
         meta_data->generation_version = 0;
 
-        flush_data((void *)meta_data, PGSIZE);
+        // flush_data((void *)meta_data, PGSIZE);
         printf("[NVM MGR]\tinitialize nvm file's head\n");
     } else {
         meta_data->generation_version++;
-        flush_data((void *)&meta_data->generation_version, sizeof(uint64_t));
+        // flush_data((void *)&meta_data->generation_version, sizeof(uint64_t));
         printf("nvm mgr restart, the free offset is %ld, generation version "
                "is %ld\n",
                meta_data->free_bit_offset, meta_data->generation_version);
@@ -101,7 +101,7 @@ NVMMgr::NVMMgr() {
         bitmap = new ((void *)bitmap_addr) std::bitset<bitmap_size>;
         std::cout<< "addr of bitmap: " << bitmap << "\n";
         // memcpy(bitmap,tmp_bitmap,sizeof(std::bitset<bitmap_size>));
-        flush_data((void *)bitmap, sizeof(std::bitset<bitmap_size>));
+        // flush_data((void *)bitmap, sizeof(std::bitset<bitmap_size>));
         std::cout << sizeof(std::bitset<bitmap_size>) << "\n";
         std::cout << bitmap_size << "\n";
         std::cout << bitmap_size / sizeof(std::bitset<bitmap_size>) << "\n";
@@ -127,7 +127,7 @@ NVMMgr::~NVMMgr() {
 void *NVMMgr::alloc_thread_info() {
     // not thread safe
     size_t index = meta_data->threads++;
-    flush_data((void *)&(meta_data->threads), sizeof(int));
+    // flush_data((void *)&(meta_data->threads), sizeof(int));
     return (void *)(thread_local_start + 2 * index * PGSIZE);
 }
 

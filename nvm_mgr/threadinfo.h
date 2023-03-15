@@ -22,6 +22,8 @@ class buddy_allocator {
                                                 256, 512, 1024, 2048, 4096};
     tbb::concurrent_queue<uint64_t> free_list[free_list_number];
     PMBlockAllocator *pmb;
+	uint64_t curr_addr;
+	uint64_t end_addr;
 
   public:
     buddy_allocator(PMBlockAllocator *pmb_) : pmb(pmb_) {
@@ -31,7 +33,7 @@ class buddy_allocator {
     ~buddy_allocator() {}
     void insert_into_freelist(uint64_t addr, size_t size);
     void *alloc_node(size_t size);
-    uint64_t get_addr(int id);
+    uint64_t get_addr();
     size_t get_power_two_size(size_t s);
     int get_freelist_size(int id) { return free_list[id].unsafe_size(); }
 };
