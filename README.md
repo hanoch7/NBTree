@@ -16,7 +16,7 @@
 ## PM environment
 ```
     sh mount.sh
-    sudo dd if=/dev/zero of=/home/bowen/mnt/pmem1/btree bs=1048576 count=num-MB
+    sudo dd if=/dev/zero of=/mnt/pmem1/btree bs=1048576 count=num-MB
 ```
 
 ## RUN
