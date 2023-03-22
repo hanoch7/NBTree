@@ -3,6 +3,7 @@
 #include <fstream>
 #include <future>
 #include <iostream>
+#include <chrono>
 #ifdef USE_PMDK
 #include <libpmemobj.h>
 #endif
@@ -20,7 +21,10 @@
 #include <tbb/spin_rw_mutex.h>
 #include "util.h"
 #include "timer.h"
+#ifdef USE_NVM_MALLOC
 #include "threadinfo.h"
+#include "EpochGuard.h"
+#endif
 #define eADR
 #define NVM
 #define CACHE_LINE 64
@@ -568,6 +572,9 @@ public:
         {
           assert(!leaf->fin_flag);
           leaf->fin_flag = 1;
+          #ifdef USE_NVM_MALLOC
+          NVMMgr_ns::EpochGuard::DeleteNode((void*)leaf->data);
+          #endif
         }
         l.release();
       }
@@ -631,6 +638,9 @@ public:
           {
             assert(!leaf->fin_flag);
             leaf->fin_flag = 1;
+            #ifdef USE_NVM_MALLOC
+            NVMMgr_ns::EpochGuard::DeleteNode((void*)leaf->data);
+            #endif
           }
           l.release();
         }
@@ -643,6 +653,9 @@ public:
           {
             assert(!leaf->fin_flag);
             leaf->fin_flag = 1;
+            #ifdef USE_NVM_MALLOC
+            NVMMgr_ns::EpochGuard::DeleteNode((void*)leaf->data);
+            #endif
           }
           l.release();
         }

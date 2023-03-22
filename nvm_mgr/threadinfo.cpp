@@ -7,7 +7,6 @@
 #include <list>
 #include <mutex>
 #include "util.h"
-// #include "../include/nbtree.h"
 
 namespace NVMMgr_ns {
 
@@ -67,7 +66,7 @@ void buddy_allocator::insert_into_freelist(uint64_t addr, size_t size) {
         for (int curr_id = free_list_number - 1; curr_id >= 0; curr_id--) {
             if (curr_addr % power_two[curr_id] == 0 &&
                 curr_size >= power_two[curr_id]) {
-                std::cout<< "curr_addr " << curr_addr << "\t" << "curr_size " << curr_size << "\t" << "curr_id " << curr_id << "\t" << "power_two[curr_id] " << power_two[curr_id] << "\n";
+                // std::cout<< "curr_addr " << curr_addr << "\t" << "curr_size " << curr_size << "\t" << "curr_id " << curr_id << "\t" << "power_two[curr_id] " << power_two[curr_id] << "\n";
                 free_list[curr_id].push(curr_addr);
                 curr_addr += power_two[curr_id];
                 curr_size -= power_two[curr_id];
@@ -78,20 +77,19 @@ void buddy_allocator::insert_into_freelist(uint64_t addr, size_t size) {
     assert(curr_size == 0);
 }
 
-uint64_t buddy_allocator::get_addr() { // 根据id从free_list中取addr //
+uint64_t buddy_allocator::get_addr(int id) { // 根据id从free_list中取addr //
     uint64_t addr;
     // if (id == free_list_number - 4) { //TODO 目前只有512
-        if (curr_addr == end_addr) {
+        if (!free_list[id].try_pop(addr)) {
             // empty, allocate block from nvm_mgr
             thread_info *ti = (thread_info *)get_threadinfo();
-            curr_addr = (uint64_t)pmb->alloc_block(ti->id);
+            addr = (uint64_t)pmb->alloc_block(ti->id);
             // std::cout << "get addr" << addr << "\n";
-            end_addr = curr_addr + NVMMgr::PGSIZE;
+            for (int i = power_two[id]; i < NVMMgr::PGSIZE;
+                 i += power_two[id]) {
+                free_list[id].push(addr + (uint64_t)i);
+            }
         }
-        addr = curr_addr;
-        curr_addr += 512;
-        // std::cout << "free_list size of "<< id << " : " << get_freelist_size(id) << "\n";
-        // std::cout<< addr << "\n";
         return addr;
     // }
 
@@ -108,14 +106,14 @@ uint64_t buddy_allocator::get_addr() { // 根据id从free_list中取addr //
 
 // alloc size smaller than 4k
 void *buddy_allocator::alloc_node(size_t size) { // size = 512
-    // int id;
-    // for (int i = 0; i < free_list_number; i++) {
-    //     if (power_two[i] >= size) {
-    //         id = i;
-    //         break;
-    //     }
-    // }
-    void *addr = (void *)get_addr();
+    int id;
+    for (int i = 0; i < free_list_number; i++) {
+        if (power_two[i] >= size) {
+            id = i;
+            break;
+        }
+    }
+    void *addr = (void *)get_addr(id);
     pmb->set_bitmap(addr);
     return addr;
 }
@@ -182,6 +180,7 @@ void thread_info::AddGarbageNode(void *node_p) {
     // to guarantee progress
     if (md->node_count > GC_NODE_COUNT_THREADHOLD) {
         // Use current thread's gc id to perform GC
+        // std::cout << "PerformGC\n";
         PerformGC();
     }
 
@@ -191,7 +190,7 @@ void thread_info::AddGarbageNode(void *node_p) {
 void thread_info::PerformGC() {
     // First of all get the minimum epoch of all active threads
     // This is the upper bound for deleted epoch in garbage node
-    uint64_t min_epoch = SummarizeGCEpoch();
+    // uint64_t min_epoch = SummarizeGCEpoch();
 
     // This is the pointer we use to perform GC
     // Note that we only fetch the metadata using the current thread-local id
@@ -200,11 +199,13 @@ void thread_info::PerformGC() {
 
     // Then traverse the linked list
     // Only reclaim memory when the deleted epoch < min epoch
-    while (first_p != nullptr && first_p->delete_epoch < min_epoch) {
+    // while (first_p != nullptr && first_p->delete_epoch < min_epoch) {
+    while (first_p != nullptr) {
         // First unlink the current node from the linked list
         // This could set it to nullptr
         header_p->next_p = first_p->next_p;
 
+        // std::cout<< "FreeEpochNode\n";
         // Then free memory
         FreeEpochNode(first_p->node_p);
 
@@ -254,6 +255,7 @@ void *alloc_new_node_from_size(size_t size) {
 // #endif
     void *addr = cg->dequeue(); // TODO: size
     if (addr != nullptr) {
+        // std::cout << addr << "from cg\n";
         return addr;
     }
 
@@ -306,7 +308,7 @@ void register_threadinfo() {
         // flush_data((void *)ti, NVMMgr::PGSIZE);
 
         void *cg_addr =addr+NVMMgr::PGSIZE;
-        cg = new (cg_addr) cicle_garbage(10, cg_addr); // TODO size
+        cg = new (cg_addr) cicle_garbage(5, cg_addr); // TODO size
         // std::cout << "addr of cg: "<< cg << "\n";
         // std::cout << "size of cg: "<< sizeof(cicle_garbage) << "\n";
         // std::cout << "addr of queue: "<< cg->m_queueArr << "\n";

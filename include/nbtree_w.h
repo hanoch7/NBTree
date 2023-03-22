@@ -16,7 +16,9 @@
 #include <time.h>
 #include <unistd.h>
 #include <vector>
-#include "../nvm_mgr/threadinfo.h"
+#ifdef USE_NVM_MALLOC
+#include "threadinfo.h"
+#endif
 #include <tbb/spin_rw_mutex.h>
 #include "util.h"
 #include "timer.h"
