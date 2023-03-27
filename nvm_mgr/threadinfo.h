@@ -2,12 +2,6 @@
 #define thread_info_h
 
 #include "Epoch.h"
-// #include "N.h"
-// #include "N16.h"
-// #include "N256.h"
-// #include "N4.h"
-// #include "N48.h"
-// #include "LeafArray.h"
 #include "pmalloc_wrap.h"
 #include "tbb/concurrent_queue.h"
 #include <list>
@@ -61,7 +55,7 @@ class thread_info {
 
     inline void LeaveEpoch() {
         // This will make ie never be counted as active for GC
-        md->last_active_epoch = static_cast<uint64_t>(-1);
+        md->last_active_epoch = nullptr;
     }
 
     /*
@@ -111,9 +105,11 @@ void *get_threadinfo();
 void JoinNewEpoch();
 void LeaveThisEpoch();
 void MarkNodeGarbage(void *node);
-uint64_t SummarizeGCEpoch();
+int* SummarizeGCEpoch();
 
 size_t convert_power_two(size_t s);
+
+void increaseEpoch();
 
 // void *alloc_new_node_from_type(PART_ns::NTypes type);
 void *alloc_new_node_from_size(size_t size);
@@ -134,22 +130,27 @@ class cicle_garbage
 		int max_size;
 		int front;
 		int end;
-		garbage_info *m_queueArr;
+		uint64_t m_queueArr[CICLE_SIZE];
+		int **epoch_arr;
 		
     public:
-  	cicle_garbage(int maxSize, void *addr)
+  	cicle_garbage()
 	{
-	    max_size = maxSize;
+	    max_size = CICLE_SIZE;
 	    front = 0;
 	    end = 0;
-      	m_queueArr = new (addr+sizeof(cicle_garbage)) garbage_info[max_size];
-	    // memset(m_queueArr, 0 , sizeof(garbage_info)*max_size);
+		epoch_arr = new int*[CICLE_SIZE];
+		for (int i = 0; i < CICLE_SIZE; i ++){
+			epoch_arr[i] = new int[MAX_THREAD];
+		}
 	}
 		
 	~cicle_garbage()
 	{
-	    delete m_queueArr;
-	    m_queueArr = nullptr;
+		for (int i = 0; i < CICLE_SIZE; i ++){
+			delete epoch_arr[i];
+		}
+		delete epoch_arr;
 	}
  
 	bool enqueue(void *addr)
@@ -159,8 +160,12 @@ class cicle_garbage
 		// std::cout<<"Queue is full!"<<"\n";
 		return false;
 	    }
- 
-	    m_queueArr[end] = garbage_info(addr, Epoch_Mgr::GetGlobalEpoch());
+
+		int* epoch = Epoch_Mgr::GetGlobalEpoch();
+		// std::cout << "epoch " << epoch << "\n";
+		memcpy(epoch_arr[end], epoch, sizeof(epoch_arr[end]));
+		// std::cout << "epoch_arr[end] " << epoch_arr[end] << "\n";
+	    m_queueArr[end] = (uint64_t)addr;
 	    end = (end + 1)%max_size;
 		return true;
 	}
@@ -172,11 +177,15 @@ class cicle_garbage
 		// std::cout<<"Queue is empty!"<<std::endl;
 		return nullptr;
 	    }
+
+		if (Epoch_Mgr::JudgeEpoch(epoch_arr[front])) {
+			// std::cout << "dequeue\n";
+			uint64_t addr = m_queueArr[front];
+	    	front = (front + 1)%max_size;
+			return (void*)addr;
+		}
 			
-    	// m_queueArr[front] = NULL; //模拟出队列动作
-		garbage_info *tmp = &m_queueArr[front];
-	    front = (front + 1)%max_size;
-		return tmp->addr;
+		return nullptr;
 	}
 
 	bool isfull()

@@ -200,7 +200,7 @@ void thread_info::PerformGC() {
     // Then traverse the linked list
     // Only reclaim memory when the deleted epoch < min epoch
     // while (first_p != nullptr && first_p->delete_epoch < min_epoch) {
-    while (first_p != nullptr) {
+    while (first_p != nullptr && Epoch_Mgr::JudgeEpoch(first_p->delete_epoch)) {
         // First unlink the current node from the linked list
         // This could set it to nullptr
         header_p->next_p = first_p->next_p;
@@ -253,6 +253,7 @@ void *alloc_new_node_from_size(size_t size) {
 //         dcmm_time = new cpuCycleTimer();
 //     dcmm_time->start();
 // #endif
+
     void *addr = cg->dequeue(); // TODO: size
     if (addr != nullptr) {
         // std::cout << addr << "from cg\n";
@@ -267,6 +268,10 @@ void free_node_from_size(uint64_t addr, size_t size) {
     // size_t node_size = ti->free_list->get_power_two_size(size);
     // ti->free_list->insert_into_freelist(addr, node_size);
     ti->free_list->insert_into_freelist(addr, size);
+}
+
+void increaseEpoch() {
+    epoch_mgr->IncreaseEpoch(ti->id);
 }
 
 void register_threadinfo() {
@@ -287,7 +292,7 @@ void register_threadinfo() {
         epoch_mgr = new Epoch_Mgr();
 
         // need to call function to create a new thread to increase epoch
-        epoch_mgr->StartThread();
+        // epoch_mgr->StartThread();
         std::cout << "[THREAD]\tfirst new epoch_mgr and add global epoch\n";
     }
     if (ti == nullptr) {
@@ -307,8 +312,7 @@ void register_threadinfo() {
         // persist thread info
         // flush_data((void *)ti, NVMMgr::PGSIZE);
 
-        void *cg_addr =addr+NVMMgr::PGSIZE;
-        cg = new (cg_addr) cicle_garbage(5, cg_addr); // TODO size
+        cg = new ((void*)((uint64_t)addr+NVMMgr::PGSIZE)) cicle_garbage(); // TODO size
         // std::cout << "addr of cg: "<< cg << "\n";
         // std::cout << "size of cg: "<< sizeof(cicle_garbage) << "\n";
         // std::cout << "addr of queue: "<< cg->m_queueArr << "\n";
@@ -358,20 +362,20 @@ void LeaveThisEpoch() { ti->LeaveEpoch(); }
 
 void MarkNodeGarbage(void *node) { ti->AddGarbageNode(node); }
 
-uint64_t SummarizeGCEpoch() {
-    assert(ti_list_head);
+// int* SummarizeGCEpoch() {
+//     assert(ti_list_head);
 
-    // Use the first metadata's epoch as min and update it on the fly
-    thread_info *tmp = ti_list_head;
-    uint64_t min_epoch = tmp->md->last_active_epoch;
+//     // Use the first metadata's epoch as min and update it on the fly
+//     thread_info *tmp = ti_list_head;
+//     int* min_epoch = tmp->md->last_active_epoch;
 
-    // This might not be executed if there is only one thread
-    while (tmp->next) {
-        tmp = tmp->next;
-        min_epoch = std::min(min_epoch, tmp->md->last_active_epoch);
-    }
+//     // This might not be executed if there is only one thread
+//     while (tmp->next) {
+//         tmp = tmp->next;
+//         min_epoch = std::min(min_epoch, tmp->md->last_active_epoch);
+//     }
 
-    return min_epoch;
-}
+//     return min_epoch;
+// }
 
 } // namespace NVMMgr_ns

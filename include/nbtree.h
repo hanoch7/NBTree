@@ -1519,11 +1519,17 @@ bool btree::modify(leaf_node_t *leaf, int pos, entry_key_t key, char *right)
       leaf = new_leaf;
     }
   }
+  #ifdef USE_NVM_MALLOC
+  NVMMgr_ns::increaseEpoch();
+  #endif
   return true;
 }
 
 char *btree::search(entry_key_t key)
 {
+  #ifdef USE_NVM_MALLOC
+  NVMMgr_ns::increaseEpoch();
+  #endif
   leaf_node_t *leaf;
   int pos;
   char *res;
@@ -1545,6 +1551,9 @@ char *btree::search(entry_key_t key)
     // result is valid
     if (leaf->data->log == NULL)
     {
+      #ifdef USE_NVM_MALLOC
+      NVMMgr_ns::increaseEpoch();
+      #endif
       return res;
     }
     else
@@ -1556,36 +1565,60 @@ char *btree::search(entry_key_t key)
       assert(key >= new_leaf->low_key);
       assert(key < new_leaf->high_key);
       pos = find_item(key, new_leaf, hash);
-      if (pos == -1)
+      if (pos == -1) {
+        #ifdef USE_NVM_MALLOC
+        NVMMgr_ns::increaseEpoch();
+        #endif
         return NULL;
-      if (leaf->sync_flag)
+      }
+      if (leaf->sync_flag) {
+        #ifdef USE_NVM_MALLOC
+        NVMMgr_ns::increaseEpoch();
+        #endif
         return leaf->data->kv[pos].ptr;
+      }
       if (res == NULL)
       {
         // item delete in old leaf, but appear in new leaf, delete it
         leaf->data->kv[pos].key = 0;
         asm_mfence();
+        #ifdef USE_NVM_MALLOC
+        NVMMgr_ns::increaseEpoch();
+        #endif
         return res;
       }
       else
       {
         new_res = leaf->data->kv[pos].ptr;
-        if (new_res == res)
+        if (new_res == res) {
+          #ifdef USE_NVM_MALLOC
+          NVMMgr_ns::increaseEpoch();
+          #endif
           return res;
+        }
         else
         {
           leaf->data->kv[pos].ptr = res;
           asm_mfence();
+          #ifdef USE_NVM_MALLOC
+          NVMMgr_ns::increaseEpoch();
+          #endif
           return res;
         }
       }
     }
   }
+  #ifdef USE_NVM_MALLOC
+  NVMMgr_ns::increaseEpoch();
+  #endif
   return res;
 }
 
 bool btree::update(entry_key_t key, char *right)
 {
+  #ifdef USE_NVM_MALLOC
+  NVMMgr_ns::increaseEpoch();
+  #endif
   leaf_node_t *leaf;
   int pos;
   char *res;
@@ -1598,8 +1631,12 @@ bool btree::update(entry_key_t key, char *right)
 
   uint8_t hash = hashfunc(key);
   pos = find_item(key, leaf, hash);
-  if (pos == -1)
+  if (pos == -1) {
+    #ifdef USE_NVM_MALLOC
+    NVMMgr_ns::increaseEpoch();
+    #endif
     return false;
+  }
   leaf->data->kv[pos].ptr = right;
 #ifndef eADR
   flush_data(&leaf->data->kv[pos].ptr, sizeof(uint64_t));
@@ -1611,6 +1648,9 @@ bool btree::update(entry_key_t key, char *right)
   {
     if (leaf->log == NULL)
     {
+      #ifdef USE_NVM_MALLOC
+      NVMMgr_ns::increaseEpoch();
+      #endif
       return true;
     }
     else
@@ -1628,20 +1668,33 @@ bool btree::update(entry_key_t key, char *right)
       {
         new_value = uint64_t(new_leaf->data->kv[npos].ptr);
         old_value = uint64_t(leaf->data->kv[pos].ptr);
-        if (!(new_value & SYNC_MASK))
-          return true;
-        if ((new_value & (~MASK)) == old_value)
-          return true;
-
+        if (!(new_value & SYNC_MASK)){
+            #ifdef USE_NVM_MALLOC
+            NVMMgr_ns::increaseEpoch();
+            #endif
+            return true;
+        }
+        if ((new_value & (~MASK)) == old_value){
+            #ifdef USE_NVM_MALLOC
+            NVMMgr_ns::increaseEpoch();
+            #endif
+            return true;
+        }
       } while (!__sync_bool_compare_and_swap(&(new_leaf->data->kv[npos].ptr), (char *)new_value, (char *)(old_value | SYNC_MASK)));
       leaf = new_leaf;
     }
   }
+  #ifdef USE_NVM_MALLOC
+  NVMMgr_ns::increaseEpoch();
+  #endif
   return true;
 }
 
 bool btree::insert(entry_key_t key, char *right)
 {
+  #ifdef USE_NVM_MALLOC
+  NVMMgr_ns::increaseEpoch();
+  #endif
   leaf_node_t *leaf, *prev = NULL;
   inner_node_t *parent;
   int old_slot;
@@ -1699,12 +1752,17 @@ bool btree::insert(entry_key_t key, char *right)
     break;
   }
 
+  #ifdef USE_NVM_MALLOC
+  NVMMgr_ns::increaseEpoch();
+  #endif
   return true;
 }
 
 bool btree::remove(entry_key_t key)
 {
-
+  #ifdef USE_NVM_MALLOC
+  NVMMgr_ns::increaseEpoch();
+  #endif
   int old_slot;
   leaf_node_t *leaf;
   bool retry;
@@ -1718,6 +1776,9 @@ bool btree::remove(entry_key_t key)
   // printf("old slot:%d\n", old_slot);
   if (old_slot == -1)
   {
+    #ifdef USE_NVM_MALLOC
+    NVMMgr_ns::increaseEpoch();
+    #endif
     return false;
   }
 
@@ -1732,6 +1793,9 @@ bool btree::remove(entry_key_t key)
   {
     if (leaf->data->log == NULL)
     {
+      #ifdef USE_NVM_MALLOC
+      NVMMgr_ns::increaseEpoch();
+      #endif
       return true;
     }
     else
@@ -1750,5 +1814,8 @@ bool btree::remove(entry_key_t key)
       leaf = new_leaf;
     }
   }
+  #ifdef USE_NVM_MALLOC
+  NVMMgr_ns::increaseEpoch();
+  #endif
   return true;
 }

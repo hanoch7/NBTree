@@ -1,6 +1,7 @@
 #include "Epoch.h"
+#include <string.h>
 
 namespace NVMMgr_ns {
-int epoch = 0;
+int* epoch;
 bool exit_flag = false;
 } // namespace NVMMgr_ns
