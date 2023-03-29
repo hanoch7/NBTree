@@ -356,9 +356,9 @@ void unregister_threadinfo() {
 
 void *get_threadinfo() { return (void *)ti; }
 
-void JoinNewEpoch() { ti->JoinEpoch(); }
+// void JoinNewEpoch() { ti->JoinEpoch(); }
 
-void LeaveThisEpoch() { ti->LeaveEpoch(); }
+// void LeaveThisEpoch() { ti->LeaveEpoch(); }
 
 void MarkNodeGarbage(void *node) { ti->AddGarbageNode(node); }
 

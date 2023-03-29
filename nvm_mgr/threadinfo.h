@@ -49,14 +49,14 @@ class thread_info {
 
     void *get_static_log() { return (void *)static_log; }
     int get_thread_id() { return id; }
-    inline void JoinEpoch() {
-        md->last_active_epoch = Epoch_Mgr::GetGlobalEpoch();
-    }
+    // inline void JoinEpoch() {
+    //     md->last_active_epoch = Epoch_Mgr::GetGlobalEpoch();
+    // }
 
-    inline void LeaveEpoch() {
-        // This will make ie never be counted as active for GC
-        md->last_active_epoch = nullptr;
-    }
+    // inline void LeaveEpoch() {
+    //     // This will make ie never be counted as active for GC
+    //     md->last_active_epoch = nullptr;
+    // }
 
     /*
      * AddGarbageNode() - Adds a garbage node into the thread-local GC context
@@ -161,9 +161,8 @@ class cicle_garbage
 		return false;
 	    }
 
-		int* epoch = Epoch_Mgr::GetGlobalEpoch();
 		// std::cout << "epoch " << epoch << "\n";
-		memcpy(epoch_arr[end], epoch, sizeof(epoch_arr[end]));
+		memcpy(epoch_arr[end], Epoch_Mgr::GetGlobalEpoch(), sizeof(epoch_arr[end]));
 		// std::cout << "epoch_arr[end] " << epoch_arr[end] << "\n";
 	    m_queueArr[end] = (uint64_t)addr;
 	    end = (end + 1)%max_size;
@@ -174,8 +173,7 @@ class cicle_garbage
 	{
 	    if(isempty())
 	    {
-		// std::cout<<"Queue is empty!"<<std::endl;
-		return nullptr;
+			return nullptr;
 	    }
 
 		if (Epoch_Mgr::JudgeEpoch(epoch_arr[front])) {
@@ -190,21 +188,11 @@ class cicle_garbage
 
 	bool isfull()
 	{
-	    if(max_size == -1)
-	    {
-		std::cout<<"Create queue error!"<<std::endl;
-		return false;
-	    }
 	    return (end + 1)%max_size == front;
 	}
  
 	bool isempty()
 	{
-	    if(max_size == -1)
-	    {
-		std::cout<<"Create queue error!"<<std::endl;
-		return false;
-	    }
 	    return end == front;
 	}
  
@@ -212,24 +200,6 @@ class cicle_garbage
 	{
 	    return (end - front + max_size) % max_size;
 	}
-
-	// void showqueue()
-	// {
-	//     // if(isempty())
-	//     // {
-	// 	// return;
-	//     // }
- 
-	//     // for(int i = front; i < front + size(); i++ )
-	//     // {
-	// 	// 	std::cout <<m_queueArr[i]<<" "<<std::endl;
-	//     // }
-	// }
-
-	// void showqueuefront()
-	// {
-	//     	// std::cout <<m_queueArr[front]<<std::endl;
-	// }
 };
 
 } // namespace NVMMgr_ns

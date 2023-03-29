@@ -11,7 +11,7 @@ static const int GC_NODE_COUNT_THREADHOLD = 1024; // 当 gc node 达到 1024 时
 
 static const int GC_INTERVAL = 50000; // 50ms 进行一次 gc
 
-static const int CICLE_SIZE = 50;
+static const int CICLE_SIZE = 5;
 
 static const int MAX_THREAD = 64 * 16;
 
@@ -80,6 +80,7 @@ class Epoch_Mgr {
     }
 
     ~Epoch_Mgr() {
+        delete epoch;
         exit_flag = true;
         std::cout << "[EPOCH]\tepoch mgr exit\n";
     }
