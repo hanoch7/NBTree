@@ -68,6 +68,7 @@ void buddy_allocator::insert_into_freelist(uint64_t addr, size_t size) {
                 curr_size >= power_two[curr_id]) {
                 // std::cout<< "curr_addr " << curr_addr << "\t" << "curr_size " << curr_size << "\t" << "curr_id " << curr_id << "\t" << "power_two[curr_id] " << power_two[curr_id] << "\n";
                 free_list[curr_id].push(curr_addr);
+                pmb->reset_bitmap((void*)curr_addr);
                 curr_addr += power_two[curr_id];
                 curr_size -= power_two[curr_id];
                 break;

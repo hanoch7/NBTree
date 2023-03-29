@@ -40,7 +40,7 @@ class PMBlockAllocator {
         return mgr->set_bitmap(addr);
     }
 
-    void unset_bitmap(void *addr) {
+    void reset_bitmap(void *addr) {
         return mgr->reset_bitmap(addr);
     }
 
