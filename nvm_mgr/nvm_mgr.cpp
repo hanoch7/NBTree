@@ -65,6 +65,7 @@ NVMMgr::NVMMgr() {
     void *addr = mmap((void *)start_addr, allocate_size, PROT_READ | PROT_WRITE,
                       MAP_SHARED, fd, 0);
 
+    memset((void*)start_addr, 0, PGSIZE*1024UL*16);
     if (addr != (void *)start_addr) {
         printf("[NVM MGR]\tmmap failed %p \n", addr);
         exit(0);
@@ -77,7 +78,6 @@ NVMMgr::NVMMgr() {
         // set status of head and set zero for bitmap
         // persist it
         std::cout<< "addr of meta_data: " << meta_data << "\n";
-        memset((void *)meta_data, 0, PGSIZE);
 
         meta_data->status = magic_number;
         meta_data->threads = 0;
@@ -149,6 +149,10 @@ void *NVMMgr::alloc_block(int tid) {
 
 
     void *addr = (void *)(data_block_start + id * PGSIZE);
+
+    // if (id == 0) {
+    //     memset(addr, 0, PGSIZE*1024UL*5);
+    // }
 
     // printf("[NVM MGR]\talloc a new block %d, type is %d\n", id, type);
     // std::cout<<"alloc a new block "<< meta_data->free_bit_offset<<"\n";

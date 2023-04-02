@@ -11,7 +11,7 @@ static const int GC_NODE_COUNT_THREADHOLD = 1024; // 当 gc node 达到 1024 时
 
 static const int GC_INTERVAL = 50000; // 50ms 进行一次 gc
 
-static const int CICLE_SIZE = 5;
+static const int CICLE_SIZE = 8;
 
 static const int MAX_THREAD = 64 * 16;
 
@@ -38,13 +38,6 @@ class GarbageNode {
 
 class GCMetaData {
   public:
-    // This is the last active epoch counter; all garbages before this counter
-    // are guaranteed to be not being used by this thread
-    // So if we take a global minimum of this value, that minimum could be
-    // be used as the global epoch value to decide whether a garbage node could
-    // be recycled
-    int* last_active_epoch;
-
     GarbageNode header;
 
     // This points to the last node in the garbage node linked list
@@ -60,8 +53,6 @@ class GCMetaData {
     int node_count;
 
     GCMetaData() {
-        last_active_epoch = new int[MAX_THREAD];
-        memset(last_active_epoch, 0, sizeof(last_active_epoch));
         last_p = &header;
         node_count = 0;
     }
