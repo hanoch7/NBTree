@@ -1492,6 +1492,9 @@ bool btree::modify(leaf_node_t *leaf, int pos, entry_key_t key, char *right)
   {
     if (leaf->log == NULL)
     {
+      #ifdef USE_NVM_MALLOC
+      NVMMgr_ns::increaseEpoch();
+      #endif
       return true;
     }
     else
@@ -1504,17 +1507,29 @@ bool btree::modify(leaf_node_t *leaf, int pos, entry_key_t key, char *right)
       uint8_t hash = hashfunc(key);
       int npos = find_item(key, new_leaf, hash);
       if (npos == -1)
+      {
+        #ifdef USE_NVM_MALLOC
+        NVMMgr_ns::increaseEpoch();
+        #endif
         return true;
+      }
       uint64_t old_value, new_value;
       do
       {
         new_value = uint64_t(new_leaf->data->kv[npos].ptr);
         old_value = uint64_t(leaf->data->kv[pos].ptr);
-        if (!(new_value & SYNC_MASK))
+        if (!(new_value & SYNC_MASK)){
+          #ifdef USE_NVM_MALLOC
+          NVMMgr_ns::increaseEpoch();
+          #endif
           return true;
-        if ((new_value & (~MASK)) == old_value)
+        }
+        if ((new_value & (~MASK)) == old_value){
+          #ifdef USE_NVM_MALLOC
+          NVMMgr_ns::increaseEpoch();
+          #endif
           return true;
-
+        }
       } while (!__sync_bool_compare_and_swap(&(new_leaf->data->kv[npos].ptr), (char *)new_value, (char *)(old_value | SYNC_MASK)));
       leaf = new_leaf;
     }
@@ -1661,8 +1676,12 @@ bool btree::update(entry_key_t key, char *right)
       assert(key >= new_leaf->low_key);
       assert(key < new_leaf->high_key);
       int npos = find_item(key, new_leaf, hash);
-      if (npos == -1)
+      if (npos == -1){
+        #ifdef USE_NVM_MALLOC
+        NVMMgr_ns::increaseEpoch();
+        #endif
         return true;
+      }
       uint64_t old_value, new_value;
       do
       {
@@ -1806,8 +1825,12 @@ bool btree::remove(entry_key_t key)
       assert(key >= new_leaf->low_key);
       assert(key < new_leaf->high_key);
       old_slot = find_item(key, new_leaf, hash);
-      if (old_slot == -1)
+      if (old_slot == -1){
+        #ifdef USE_NVM_MALLOC
+        NVMMgr_ns::increaseEpoch();
+        #endif
         return true;
+      }
       // Prevent from delete the new insert
       new_leaf->data->kv[old_slot].key = 0;
       asm_mfence();

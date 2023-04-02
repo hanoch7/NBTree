@@ -99,19 +99,19 @@ public:
 class InsertOnlyBench : public Benchmark
 {
 	RandomGenerator *salt;
-	int *ct;
-	int count;
-	int id;
+	// int *ct;
+	// int count;
+	// int id;
 
 public:
 	InsertOnlyBench(Config &conf, int workerid = 0) : Benchmark(conf)
 	{
 		salt = new RandomGenerator();
-		ct = new int[10];
-		for (int i = 0; i < 10; ++i)
-			ct[i] = 0;
-		count = 10;
-		id = workerid;
+		// ct = new int[10];
+		// for (int i = 0; i < 10; ++i)
+		// 	ct[i] = 0;
+		// count = 10;
+		// id = workerid;
 	}
 	std::pair<OperationType, long long> nextOperation()
 	{
@@ -206,6 +206,41 @@ public:
 		else
 		{
 			return std::make_pair(GET, (d + 1) * interval);
+		}
+	}
+	long long nextInitKey()
+	{
+		return interval * Benchmark::nextInitKey();
+	}
+};
+
+class InsertAndDelete : public Benchmark {
+	public:
+	int read_ratio = 50;
+	int interval;
+	RandomGenerator rdm;
+	RandomGenerator *salt;
+	InsertAndDelete(Config &conf) : Benchmark(conf)
+	{
+		read_ratio = conf.read_ratio;
+		interval = conf.interval;
+		salt = new RandomGenerator();
+	}
+	virtual std::pair<OperationType, long long> nextOperation()
+	{
+		int k = rdm.randomInt() % 100;
+		// k = 0;
+		long long d = workload->Next() % _conf.init_keys;
+		if (k >= read_ratio)
+		{
+			// generate (1, INTEVEL-1)
+			long long x = salt->Next() % interval;
+			return std::make_pair(INSERT, (d + 1) * interval + x);
+		}
+		else
+		{	
+			long long d = workload->Next() % _conf.init_keys;
+			return std::make_pair(REMOVE,  (d + 1) * interval);
 		}
 	}
 	long long nextInitKey()

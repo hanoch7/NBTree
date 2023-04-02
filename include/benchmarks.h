@@ -4,7 +4,7 @@
 #include "microbench.h"
 #include "config.h"
 
-static Benchmark *getBenchmark(Config conf, int workerid = 0)
+static Benchmark *getBenchmark(Config conf, int workerid = 0) //
 {
 	switch (conf.benchmark)
 	{
@@ -26,6 +26,8 @@ static Benchmark *getBenchmark(Config conf, int workerid = 0)
 	case UPSERT:
 		// printf("Benchmark: YCSB (Upsert)\n");
 		return new Upsert(conf);
+	case INSERTANDDELETE:
+		return new InsertAndDelete(conf);
 	default:
 		printf("none support benchmark %d\n", conf.benchmark);
 		exit(0);

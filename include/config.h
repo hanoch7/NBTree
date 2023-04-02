@@ -31,6 +31,7 @@ enum BenchMarkType
   DELETE_ONLY,
   YCSB_A,
   UPSERT,
+  INSERTANDDELETE,
   _BenchMarkType
 };
 
