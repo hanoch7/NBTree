@@ -23,7 +23,6 @@
 #include "timer.h"
 #ifdef USE_NVM_MALLOC
 #include "threadinfo.h"
-#include "EpochGuard.h"
 #endif
 #define eADR
 #define NVM
@@ -573,7 +572,7 @@ public:
           assert(!leaf->fin_flag);
           leaf->fin_flag = 1;
           #ifdef USE_NVM_MALLOC
-          NVMMgr_ns::EpochGuard::DeleteNode((void*)leaf->data);
+          NVMMgr_ns::MarkNodeGarbage((void*)leaf->data);
           #endif
         }
         l.release();
@@ -639,7 +638,7 @@ public:
             assert(!leaf->fin_flag);
             leaf->fin_flag = 1;
             #ifdef USE_NVM_MALLOC
-            NVMMgr_ns::EpochGuard::DeleteNode((void*)leaf->data);
+            NVMMgr_ns::MarkNodeGarbage((void*)leaf->data);
             #endif
           }
           l.release();
@@ -654,7 +653,7 @@ public:
             assert(!leaf->fin_flag);
             leaf->fin_flag = 1;
             #ifdef USE_NVM_MALLOC
-            NVMMgr_ns::EpochGuard::DeleteNode((void*)leaf->data);
+            NVMMgr_ns::MarkNodeGarbage((void*)leaf->data);
             #endif
           }
           l.release();
@@ -1810,7 +1809,7 @@ bool btree::remove(entry_key_t key)
 #endif
   while (leaf->check_split())
   {
-    if (leaf->data->log == NULL)
+    if (leaf->data->log == NULL || leaf->log == NULL)
     {
       #ifdef USE_NVM_MALLOC
       NVMMgr_ns::increaseEpoch();

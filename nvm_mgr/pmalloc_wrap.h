@@ -13,7 +13,6 @@
 namespace NVMMgr_ns {
 
 class PMBlockAllocator {
-    int alignment = 64;
     NVMMgr *mgr;
 
   public:

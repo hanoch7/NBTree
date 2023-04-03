@@ -1,5 +1,4 @@
 #include "nvm_mgr.h"
-// #include "Tree.h"
 #include "threadinfo.h"
 #include <cassert>
 #include <iostream>
@@ -75,39 +74,23 @@ NVMMgr::NVMMgr() {
     // initialize meta data
     meta_data = static_cast<Head *>(addr);
     if (initial) {
-        // set status of head and set zero for bitmap
-        // persist it
-        std::cout<< "addr of meta_data: " << meta_data << "\n";
-
         meta_data->status = magic_number;
         meta_data->threads = 0;
         meta_data->free_bit_offset = 0;
         meta_data->generation_version = 0;
 
-        // flush_data((void *)meta_data, PGSIZE);
+        bitmap = new ((void *)bitmap_addr) std::bitset<bitmap_size>;
+
         printf("[NVM MGR]\tinitialize nvm file's head\n");
     } else {
         meta_data->generation_version++;
-        // flush_data((void *)&meta_data->generation_version, sizeof(uint64_t));
         printf("nvm mgr restart, the free offset is %ld, generation version "
                "is %ld\n",
                meta_data->free_bit_offset, meta_data->generation_version);
     }
 
     // initialize bitmap
-    // bitmap = static_cast<std::bitset<bitmap_size> *>(addr+PGSIZE);
-    // std::bitset<bitmap_size> *tmp_bitmap;
     if (initial) {
-        bitmap = new ((void *)bitmap_addr) std::bitset<bitmap_size>;
-        std::cout<< "addr of bitmap: " << bitmap << "\n";
-        // memcpy(bitmap,tmp_bitmap,sizeof(std::bitset<bitmap_size>));
-        // flush_data((void *)bitmap, sizeof(std::bitset<bitmap_size>));
-        std::cout << sizeof(std::bitset<bitmap_size>) << "\n";
-        std::cout << bitmap_size << "\n";
-        std::cout << bitmap_size / sizeof(std::bitset<bitmap_size>) << "\n";
-        // std::cout << bitmap->test(0) << "\n";
-        // bitmap->set(0);
-        // std::cout << bitmap->test(0) << "\n";
     } else {
         // TODO
     }
@@ -118,8 +101,6 @@ NVMMgr::NVMMgr() {
 NVMMgr::~NVMMgr() {
     // normally exit
     printf("[NVM MGR]\tnormally exits, NVM reset..\n");
-    //        Head *head = (Head *) start_addr;
-    //        flush_data((void *) head, sizeof(Head));
     munmap((void *)start_addr, allocate_size);
     close(fd);
 }
@@ -127,37 +108,14 @@ NVMMgr::~NVMMgr() {
 void *NVMMgr::alloc_thread_info() {
     // not thread safe
     size_t index = meta_data->threads++;
-    // flush_data((void *)&(meta_data->threads), sizeof(int));
     return (void *)(thread_local_start + 2 * index * PGSIZE);
-}
-
-void *NVMMgr::get_thread_info(int tid) {
-    return (void *)(thread_local_start + 2 * tid * PGSIZE);
 }
 
 void *NVMMgr::alloc_block(int tid) {
     uint64_t id = __sync_fetch_and_add(&meta_data->free_bit_offset, 1);
-    // // std::cout << "id: " << id << "\n";
-
-    // std::lock_guard<std::mutex> lock(_mtx);
-
-    // uint64_t id = meta_data->free_bit_offset;
-    // meta_data->free_bit_offset++;
     meta_data->bitmap[id] = tid;
-    // flush_data((void *)&(meta_data->bitmap[id]), sizeof(uint8_t));
-    // flush_data((void *)&(meta_data->free_bit_offset), sizeof(uint64_t));
-
 
     void *addr = (void *)(data_block_start + id * PGSIZE);
-
-    // if (id == 0) {
-    //     memset(addr, 0, PGSIZE*1024UL*5);
-    // }
-
-    // printf("[NVM MGR]\talloc a new block %d, type is %d\n", id, type);
-    // std::cout<<"alloc a new block "<< meta_data->free_bit_offset<<"\n";
-    // std::cout<<"meta data addr "<< meta_data<<"\n";
-    // std::cout<<"mgr addr" <<this<<"\n";
 
     return addr;
 }
@@ -165,17 +123,11 @@ void *NVMMgr::alloc_block(int tid) {
 void NVMMgr::set_bitmap(void *addr) {
     long offset = (long)addr - data_block_start;
     bitmap->set(offset/512); // TODO 512
-    // std::cout << "set" << offset/512 << "\n";
-    // std::chrono::milliseconds duration(100);
-    // std::this_thread::sleep_for(duration);
 }
 
 void NVMMgr::reset_bitmap(void *addr) {
     long offset = (long)addr - data_block_start;
     bitmap->reset(offset/512); // TODO 512
-    // std::cout << "reset" << offset/512 << "\n";
-    // std::chrono::milliseconds duration(100);
-    // std::this_thread::sleep_for(duration);
 }
 
 // TODO
@@ -221,37 +173,6 @@ void NVMMgr::recovery_free_memory(int forward_thread) {
 
                 std::sort(recovery_set.begin(), recovery_set.end());
                 std::cout << "start to reclaim\n";
-
-//                for (int i = 0; i < recovery_set.size(); i++) {
-//                    uint64_t this_addr = recovery_set[i].first;
-//                    uint64_t this_size = recovery_set[i].second;
-//                    for (int id = 0; id < 10; id++) {
-//                        if (this_size <= power_two[id]) {
-//                            this_size = power_two[id];
-//                            break;
-//                        }
-//                    }
-//
-//                    int j = start_addr / PGSIZE;
-//                    int tid =
-//                        meta_data
-//                            ->bitmap[j]; // this block belong to which thread
-//                    thread_info *the_ti = (thread_info *)get_thread_info(tid);
-//
-//                    the_ti->free_list->insert_into_freelist(
-//                        start_addr, this_addr - start_addr);
-//                    start_addr = this_addr + this_size;
-//                }
-//
-//                int j = start_addr / PGSIZE;
-//                int tid =
-//                    meta_data->bitmap[j]; // this block belong to which thread
-//                thread_info *the_ti = (thread_info *)get_thread_info(tid);
-//
-//                if (end_addr >= start_addr) {
-//                    the_ti->free_list->insert_into_freelist(
-//                        start_addr, end_addr - start_addr);
-//                }
 #endif
             },
             i);

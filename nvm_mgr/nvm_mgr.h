@@ -1,7 +1,6 @@
 #ifndef nvm_mgr_h
 #define nvm_mgr_h
 
-// #include "Tree.h"
 #include <fcntl.h>
 #include <list>
 #include <set>
@@ -17,35 +16,6 @@ static const char *nvm_dir = "/mnt/pmem1/";
 namespace NVMMgr_ns {
 
 class NVMMgr {
-    /*
-     *
-     * A simple structure to manage the NVM file
-     *
-     *   / 256K  /  128 * 256K  /     ...     /
-     *  / head  / thread local / data blocks /
-     *
-     *  head:
-     *       Avaiable to the NVM manager, including root and bitmap to indicate
-     *       how many blocks have been allocated.
-     *
-     *  thread local:
-     *       Each thread can own a thread local persistent memory area. After
-     * system crashes, NVM manager gives these thread local persistent memory to
-     * the application. The application may use thread local variables to help
-     * recovery. For example, in RNTree, a leaf node is logged in the thread
-     * local area before it is splitted. The recovery procedure can use the
-     * thread local log to guarantee the crash consistency of the leaf.
-     *
-     *       The function "recover_done" should be invoked after the recovery,
-     * otherwise these thread local persistent memories are leaked. The maximum
-     * number of thread local blocks can be allocated is hard coded in this
-     * file.
-     *
-     *  data:
-     *       True persistent memory allocated for applications. For simplicity,
-     * we do not recyle memory.
-     *
-     */
   public:
     static const int magic_number = 12345;
     static const int max_threads = 64;
@@ -80,19 +50,11 @@ class NVMMgr {
 
     ~NVMMgr();
 
-    //    bool reload_free_blocks();
-
-    void *alloc_tree_root() { return (void *)meta_data; }
-
     void *alloc_thread_info();
-
-    void *get_thread_info(int tid);
 
     void *alloc_block(int tid);
 
     void recovery_free_memory(int forward_thread);
-
-    uint64_t get_generation_version() { return meta_data->generation_version; }
 
     void set_bitmap(void *addr);
 
@@ -111,8 +73,6 @@ class NVMMgr {
 
 NVMMgr *get_nvm_mgr();
 
-// true: first initialize
-// false: have been initialized
 bool init_nvm_mgr();
 
 void close_nvm_mgr();
