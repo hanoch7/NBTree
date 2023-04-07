@@ -98,7 +98,7 @@ void *buddy_allocator::alloc_node(size_t size) { // size = 512
         }
     }
     void *addr = (void *)get_addr(id);
-    pmb->set_bitmap(addr);
+    // pmb->set_bitmap(addr);
     return addr;
 }
 
@@ -121,6 +121,11 @@ thread_info::thread_info() {
     md = new GCMetaData();
     _lock = 0;
     id = tid++;
+    for (int i = 0; i<log_length; i++){
+        static_log[i].old_addr = uint64_t(0);
+        static_log[i].new_addr1 = uint64_t(0);
+        static_log[i].new_addr2 = uint64_t(0);
+    }
 }
 
 thread_info::~thread_info() {
@@ -144,6 +149,34 @@ void thread_info::AddGarbageNode(void *node_p) {
     }
 
     return;
+}
+
+void thread_info::SetLog(void* old_addr, void* new_addr1, void* new_addr2) {
+    for (int i = 0; i<log_length; i++) {
+        if (static_log[i].old_addr == uint64_t(0)) {
+            static_log[i].old_addr = uint64_t(old_addr);
+            static_log[i].new_addr1 = uint64_t(new_addr1);
+            static_log[i].new_addr2 = uint64_t(new_addr2);
+            return;
+        }
+    }  
+    assert(0);
+}
+
+void thread_info::ResetLog(void* old_addr) {
+    for (int i = 0; i<log_length; i++){
+        if (static_log[i].old_addr == uint64_t(old_addr)) {
+            pmblock->set_bitmap((void*)static_log[i].new_addr1);
+            pmblock->set_bitmap((void*)static_log[i].new_addr2);
+            static_log[i].old_addr = uint64_t(0);
+            static_log[i].new_addr1 = uint64_t(0);
+            static_log[i].new_addr2 = uint64_t(0);
+        }
+    }
+}
+
+void SetBitmap(void* addr) {
+    pmblock->set_bitmap(addr);
 }
 
 void thread_info::PerformGC() {
@@ -261,4 +294,8 @@ void unregister_threadinfo() {
 void *get_threadinfo() { return (void *)ti; }
 
 void MarkNodeGarbage(void *node) { ti->AddGarbageNode(node); }
+
+void SetLog(void* old_addr, void* new_addr1, void* new_addr2) {ti->SetLog(old_addr,new_addr1,new_addr2);}
+
+void ResetLog(void* old_addr) {ti->ResetLog(old_addr);}
 } // namespace NVMMgr_ns

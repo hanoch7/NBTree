@@ -53,10 +53,13 @@ typedef tbb::speculative_spin_rw_mutex speculative_lock_t;
 typedef speculative_lock_t::scoped_lock htm_lock;
 // using namespace std;
 
-void *data_alloc(size_t size)
+void *data_alloc(size_t size, bool with_bitmap_set)
 {
     #ifdef USE_NVM_MALLOC
 			void *ret = NVMMgr_ns::alloc_new_node_from_size(size);
+      if (with_bitmap_set) {
+        NVMMgr_ns::SetBitmap(ret);
+      }
 	  #else
       void *ret = curr_addr;
       curr_addr += size;
@@ -259,7 +262,7 @@ public:
   {
     number = 0;
     bitmap = 0;
-    data = (data_node_t *)data_alloc(sizeof(data_node_t));
+    data = (data_node_t *)data_alloc(sizeof(data_node_t),true);
     log = NULL;
     next = NULL;
     copy_flag = sync_flag = prev_flag = fin_flag = 0;
@@ -573,6 +576,7 @@ public:
           leaf->fin_flag = 1;
           #ifdef USE_NVM_MALLOC
           NVMMgr_ns::MarkNodeGarbage((void*)leaf->data);
+          NVMMgr_ns::ResetLog((void*)leaf->data);
           #endif
         }
         l.release();
@@ -639,6 +643,7 @@ public:
             leaf->fin_flag = 1;
             #ifdef USE_NVM_MALLOC
             NVMMgr_ns::MarkNodeGarbage((void*)leaf->data);
+            NVMMgr_ns::ResetLog((void*)leaf->data);
             #endif
           }
           l.release();
@@ -654,6 +659,7 @@ public:
             leaf->fin_flag = 1;
             #ifdef USE_NVM_MALLOC
             NVMMgr_ns::MarkNodeGarbage((void*)leaf->data);
+            NVMMgr_ns::ResetLog((void*)leaf->data);
             #endif
           }
           l.release();
@@ -1185,7 +1191,7 @@ leaf_node_t *btree::SplitLeaf(leaf_node_t *leaf, inner_node_t *parent, leaf_node
   leaf_node_t *firleaf, *secleaf;
 
   // 1. copy the entry from old leaf to new leaf
-  copy(leaf);
+  copy(leaf); //
 
   // 2. sync the update/delete happened in copy phase
   sync(leaf);
@@ -1258,8 +1264,11 @@ void btree::copy(leaf_node_t *leaf)
   // 2. alllocate leaf and data
   leaf_node_t *firleaf = (leaf_node_t *)leaf_alloc(sizeof(leaf_node_t));
   leaf_node_t *secleaf = (leaf_node_t *)leaf_alloc(sizeof(leaf_node_t));
-  data_node_t *firdata = (data_node_t *)data_alloc(sizeof(data_node_t));
-  data_node_t *secdata = (data_node_t *)data_alloc(sizeof(data_node_t));
+  data_node_t *firdata = (data_node_t *)data_alloc(sizeof(data_node_t),false);
+  data_node_t *secdata = (data_node_t *)data_alloc(sizeof(data_node_t),false);
+  #ifdef USE_NVM_MALLOC
+  NVMMgr_ns::SetLog((void*)leaf->data, (void*)firdata ,(void*)secdata);
+  #endif
   firleaf->data = firdata;
   secleaf->data = secdata;
 

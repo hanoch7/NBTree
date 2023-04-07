@@ -9,6 +9,7 @@
 namespace NVMMgr_ns {
 
 const static int free_list_number = 10; // from 8byte to 4K
+const static int log_length = 32;
 // maintain free memory like buddy system in linux
 class buddy_allocator {
   private:
@@ -29,6 +30,12 @@ class buddy_allocator {
     size_t get_power_two_size(size_t s);
 };
 
+struct ThreadLog {
+    uint64_t old_addr;
+    uint64_t new_addr1;
+    uint64_t new_addr2;
+};
+
 class thread_info {
   public:
     int id;
@@ -39,13 +46,16 @@ class thread_info {
     // epoch based GC metadata
     GCMetaData *md;
 
-    char static_log[4032];
+    ThreadLog static_log[log_length];
   public:
     // interface
     thread_info();
     ~thread_info();
 
     void AddGarbageNode(void *node_p);
+
+	void SetLog(void* old_addr, void* new_addr1, void* new_addr2);
+	void ResetLog(void* old_addr);
 
     void PerformGC();
     void FreeEpochNode(void *node_p);
@@ -69,6 +79,11 @@ void unregister_threadinfo();
 void *get_threadinfo();
 
 void MarkNodeGarbage(void *node);
+
+void SetLog(void* old_addr, void* new_addr1, void* new_addr2);
+void ResetLog(void* old_addr);
+
+void SetBitmap(void* addr);
 
 void increaseEpoch();
 
