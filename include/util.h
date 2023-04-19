@@ -14,7 +14,8 @@
 
 #include <bits/stdc++.h>
 
-#define USE_NVM_MALLOC
+// #define USE_NVM_MALLOC
+#define PMEM
 
 static void clear_cache()
 {

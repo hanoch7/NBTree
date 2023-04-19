@@ -24,6 +24,9 @@
 #ifdef USE_NVM_MALLOC
 #include "threadinfo.h"
 #endif
+#ifdef PMEM
+#include "../pmdk/allocator.h"
+#endif
 #define eADR
 #define NVM
 #define CACHE_LINE 64
@@ -60,9 +63,17 @@ void *data_alloc(size_t size, bool with_bitmap_set)
       if (with_bitmap_set) {
         NVMMgr_ns::SetBitmap(ret);
       }
+      // std::cout<<"alloc "<< ret<< "\n";
 	  #else
+      #ifdef PMEM
+      void *ret;
+      // std::cout<<"here "<< "\n";
+        Allocator::Allocate(&ret, size);
+        // std::cout<<"alloc "<< ret<< "\n";
+      #else
       void *ret = curr_addr;
       curr_addr += size;
+      #endif
     #endif
     return ret;
 }

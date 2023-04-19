@@ -23,6 +23,9 @@
 #ifdef USE_NVM_MALLOC
 #include "nvm_mgr.h"
 #endif
+#ifdef PMEM
+#include "../pmdk/allocator.h"
+#endif
 
 char *thread_space_start_addr;
 __thread char *start_addr;
@@ -141,6 +144,8 @@ public:
 		#ifdef USE_NVM_MALLOC
 			NVMMgr_ns::register_threadinfo();
 		#else // TODO: 代码逻辑
+			#ifdef PMEM
+			#else
 			start_addr = thread_space_start_addr + workerid * SPACE_PER_THREAD;
 			curr_addr = start_addr;
 			if (conf.benchmark == INSERT_ONLY || conf.benchmark == UPSERT)
@@ -148,6 +153,7 @@ public:
 				memset(start_addr, 0, SPACE_PER_THREAD);
 				clear_cache();
 			}
+			#endif
 		#endif
 
 		stick_this_thread_to_core(workerid * 2 + 1);
@@ -197,6 +203,13 @@ public:
 		NVMMgr_ns::init_nvm_mgr();
 		NVMMgr_ns::register_threadinfo();
 #else
+	#ifdef PMEM
+		bool file_exist = false;
+		const char *pool_name = "/mnt/pmem1/pmdk.data";
+  		if (FileExists(pool_name)) file_exist = true;
+		std::cout<< file_exist << "\n";
+  		Allocator::Initialize(pool_name, (size_t)1024ul * 1024ul * 1024ul * 10ul);
+	#else
 		// Create memory pool
 		int fd = open("/mnt/pmem1/btree", O_RDWR);
 		if (fd < 0)
@@ -214,6 +227,7 @@ public:
 		start_addr = (char *)pmem;
 		curr_addr = start_addr;
 		thread_space_start_addr = (char *)pmem + SPACE_OF_MAIN_THREAD;
+	#endif
 #endif
 		void *mem = new char[allocate_mem];
 		start_mem = (char *)mem;
