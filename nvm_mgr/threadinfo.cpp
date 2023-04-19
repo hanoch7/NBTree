@@ -183,7 +183,7 @@ void thread_info::PerformGC() {
     GarbageNode *header_p = &(md->header);
     GarbageNode *first_p = header_p->next_p;
 
-    while (first_p != nullptr && Epoch_Mgr::JudgeEpoch(first_p->delete_epoch)) {
+    while (first_p != nullptr && true) {
         header_p->next_p = first_p->next_p;
 
         FreeEpochNode(first_p->node_p);
@@ -220,7 +220,7 @@ void free_node_from_size(uint64_t addr, size_t size) {
 }
 
 void increaseEpoch() {
-    epoch_mgr->IncreaseEpoch(ti->id);
+    // epoch_mgr->IncreaseEpoch(ti->id);
 }
 
 void register_threadinfo() {
