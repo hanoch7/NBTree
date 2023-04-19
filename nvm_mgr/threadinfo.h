@@ -141,7 +141,7 @@ class cicle_garbage
 			return nullptr;
 	    }
 
-		if (true) {
+		if (Epoch_Mgr::JudgeEpoch(epoch_arr[front])) {
 			uint64_t addr = m_queueArr[front];
 	    front = (front + 1)%max_size;
 			return (void*)addr;
