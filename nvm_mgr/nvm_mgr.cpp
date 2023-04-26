@@ -12,6 +12,7 @@ namespace NVMMgr_ns {
 
 // global nvm manager
 NVMMgr *nvm_mgr = NULL;
+NVMMgr *nvm_mgr1 = NULL;
 std::mutex _mtx;
 
 int create_file(const char *file_name, uint64_t file_size) {
@@ -32,8 +33,9 @@ int create_file(const char *file_name, uint64_t file_size) {
     return 0;
 }
 
-NVMMgr::NVMMgr() {
+NVMMgr::NVMMgr(bool isother = false) {
     // access 的返回结果， 0: 存在， 1: 不存在
+    if (!isother) {
     int initial = access(get_filename(), F_OK);
     printf("[NVM MGR]\tinitial: %d\n", initial);
     first_created = false;
@@ -60,6 +62,10 @@ NVMMgr::NVMMgr() {
     }
     printf("[NVM MGR]\topen file %s success.\n", get_filename());
 
+    start_addr = 0x50000000;
+    bitmap_addr = start_addr + PGSIZE; // addr of bitmap
+    thread_local_start = bitmap_addr + bitmap_size / 8;
+    data_block_start = thread_local_start + 2 * PGSIZE * max_threads; // 一个PGSIZE存ti，一个PGSIZE存cicle_garbage
     // mmap
     void *addr = mmap((void *)start_addr, allocate_size, PROT_READ | PROT_WRITE,
                       MAP_SHARED, fd, 0);
@@ -95,6 +101,66 @@ NVMMgr::NVMMgr() {
         // TODO
     }
     // delete tmp_bitmap;
+    } else {
+    int initial = access(get_filename1(), F_OK);
+    printf("[NVM MGR]\tinitial: %d\n", initial);
+    first_created = false;
+
+    if (initial) {
+        int result = create_file(get_filename1(), allocate_size);
+        if (result != 0) {
+            printf("[NVM MGR]\tcreate file failed when initalizing\n");
+            exit(1);
+        }
+        first_created = true;
+        printf("[NVM MGR]\tcreate file success.\n");
+    }
+
+    // open file
+    fd = open(get_filename1(), O_RDWR);
+    if (fd < 0) {
+        printf("[NVM MGR]\tfailed to open nvm file\n");
+        exit(-1);
+    }
+    if (ftruncate(fd, allocate_size) < 0) {
+        printf("[NVM MGR]\tfailed to truncate file\n");
+        exit(-1);
+    }
+    printf("[NVM MGR]\topen file %s success.\n", get_filename1());
+
+    start_addr = 0x50000000+allocate_size;
+    bitmap_addr = start_addr + PGSIZE; // addr of bitmap
+    thread_local_start = bitmap_addr + bitmap_size / 8;
+    data_block_start = thread_local_start + 2 * PGSIZE * max_threads; // 一个PGSIZE存ti，一个PGSIZE存cicle_garbage
+    // mmap
+    void *addr = mmap((void *)start_addr, allocate_size, PROT_READ | PROT_WRITE,
+                      MAP_SHARED, fd, 0);
+
+    memset((void*)start_addr, 0, PGSIZE*1024UL*16);
+    if (addr != (void *)start_addr) {
+        printf("[NVM MGR]\tmmap failed %p \n", addr);
+        exit(0);
+    }
+    printf("[NVM MGR]\tmmap successfully\n");
+
+    // initialize meta data
+    meta_data = static_cast<Head *>(addr);
+    if (initial) {
+        meta_data->status = magic_number;
+        meta_data->threads = 0;
+        meta_data->free_bit_offset = 0;
+        meta_data->generation_version = 0;
+
+        bitmap = new ((void *)bitmap_addr) std::bitset<bitmap_size>;
+
+        printf("[NVM MGR]\tinitialize nvm file's head\n");
+    } else {
+        meta_data->generation_version++;
+        printf("nvm mgr restart, the free offset is %ld, generation version "
+               "is %ld\n",
+               meta_data->free_bit_offset, meta_data->generation_version);
+    }
+    }
 
 }
 
@@ -185,18 +251,23 @@ void NVMMgr::recovery_free_memory(int forward_thread) {
 /*
  * interface to call methods of nvm_mgr
  */
-NVMMgr *get_nvm_mgr() {
+NVMMgr *get_nvm_mgr(int workerid) {
     std::lock_guard<std::mutex> lock(_mtx);
 
     if (nvm_mgr == NULL) {
         printf("[NVM MGR]\tnvm manager is not initilized.\n");
         assert(0);
     }
+    if ((workerid % 2) != 0){
     return nvm_mgr;
+    }
+
+    return nvm_mgr1;
 }
 
 bool init_nvm_mgr() {
     int tag = system((std::string("rm -rf ") + nvm_dir + "part.data").c_str());
+    int tag1 = system((std::string("rm -rf ") + nvm_dir1 + "part.data").c_str());
     std::lock_guard<std::mutex> lock(_mtx);
 
     if (nvm_mgr) {
@@ -204,6 +275,7 @@ bool init_nvm_mgr() {
         return false;
     }
     nvm_mgr = new NVMMgr();
+    nvm_mgr1 = new NVMMgr(true);
     return true;
 }
 

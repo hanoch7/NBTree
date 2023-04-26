@@ -20,13 +20,13 @@ class PMBlockAllocator {
     ~PMBlockAllocator() {}
 
     void *alloc_block(int tid) {
-        if (mgr == NULL) {
-            mgr = get_nvm_mgr();
-            if (mgr == NULL) {
-                std::cout << "[PMBLOCK]\tneed to call init_nvm_mgr() first\n";
-                assert(0);
-            }
-        }
+        // if (mgr == NULL) {
+        //     mgr = get_nvm_mgr();
+        //     if (mgr == NULL) {
+        //         std::cout << "[PMBLOCK]\tneed to call init_nvm_mgr() first\n";
+        //         assert(0);
+        //     }
+        // }
         // mgr is thread safe
         return mgr->alloc_block(tid);
     }

@@ -12,6 +12,7 @@
 #include <bitset>
 
 static const char *nvm_dir = "/mnt/pmem1/";
+static const char *nvm_dir1 = "/mnt/pmem0/";
 
 namespace NVMMgr_ns {
 
@@ -25,13 +26,18 @@ class NVMMgr {
     static const uint64_t allocate_size = 1024ULL * 1024 * PGSIZE; // 256GB
     static const uint64_t bitmap_size = allocate_size / 512; // TODO: fix 512
 
-    static const size_t start_addr = 0x50000000;
-    static const size_t bitmap_addr = start_addr + PGSIZE; // addr of bitmap
-    static const size_t thread_local_start = bitmap_addr + bitmap_size / 8;
-    static const size_t data_block_start = thread_local_start + 2 * PGSIZE * max_threads; // 一个PGSIZE存ti，一个PGSIZE存cicle_garbage
+    size_t start_addr = 0x50000000;
+    size_t bitmap_addr = start_addr + PGSIZE; // addr of bitmap
+    size_t thread_local_start = bitmap_addr + bitmap_size / 8;
+    size_t data_block_start = thread_local_start + 2 * PGSIZE * max_threads; // 一个PGSIZE存ti，一个PGSIZE存cicle_garbage
 
     static const char *get_filename() {
         static const std::string filename = std::string(nvm_dir) + "part.data";
+        return filename.c_str();
+    }
+
+    static const char *get_filename1() {
+        static const std::string filename = std::string(nvm_dir1) + "part.data";
         return filename.c_str();
     }
 
@@ -46,7 +52,7 @@ class NVMMgr {
     };
 
   public:
-    NVMMgr();
+    NVMMgr(bool isother);
 
     ~NVMMgr();
 
@@ -71,7 +77,7 @@ class NVMMgr {
     std::bitset<bitmap_size> *bitmap;
 } __attribute__((aligned(64)));
 
-NVMMgr *get_nvm_mgr();
+NVMMgr *get_nvm_mgr(int workerid);
 
 bool init_nvm_mgr();
 

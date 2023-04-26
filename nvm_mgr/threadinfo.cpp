@@ -12,6 +12,7 @@ namespace NVMMgr_ns {
 
 // global block allocator
 PMBlockAllocator *pmblock = nullptr;
+PMBlockAllocator *pmblock1 = nullptr;
 
 // global threadinfo lock to protect alloc thread info
 std::mutex ti_lock;
@@ -115,8 +116,14 @@ size_t buddy_allocator::get_power_two_size(size_t s) {
 
 /*************************thread_info interface**************************/
 
-thread_info::thread_info() {
-    free_list = new buddy_allocator(pmblock);
+thread_info::thread_info(int worker) {
+    if ((worker % 2) != 0){
+        free_list = new buddy_allocator(pmblock);
+    } else {
+        free_list = new buddy_allocator(pmblock1);
+    }
+    
+    workerid = worker;
 
     md = new GCMetaData();
     _lock = 0;
@@ -166,8 +173,6 @@ void thread_info::SetLog(void* old_addr, void* new_addr1, void* new_addr2) {
 void thread_info::ResetLog(void* old_addr) {
     for (int i = 0; i<log_length; i++){
         if (static_log[i].old_addr == uint64_t(old_addr)) {
-            pmblock->set_bitmap((void*)static_log[i].new_addr1);
-            pmblock->set_bitmap((void*)static_log[i].new_addr2);
             static_log[i].old_addr = uint64_t(0);
             static_log[i].new_addr1 = uint64_t(0);
             static_log[i].new_addr2 = uint64_t(0);
@@ -176,7 +181,12 @@ void thread_info::ResetLog(void* old_addr) {
 }
 
 void SetBitmap(void* addr) {
-    pmblock->set_bitmap(addr);
+    if ((ti->workerid % 2) != 0){
+        pmblock->set_bitmap(addr);
+    } else {
+        pmblock1->set_bitmap(addr);
+    }
+    
 }
 
 void thread_info::PerformGC() {
@@ -223,7 +233,7 @@ void increaseEpoch() {
     epoch_mgr->IncreaseEpoch(ti->id);
 }
 
-void register_threadinfo() {
+void register_threadinfo(int workerid) {
 #ifdef INSTANT_RESTART
     NVMMgr *mgr = get_nvm_mgr();
     thread_generation = mgr->get_generation_version();
@@ -232,7 +242,8 @@ void register_threadinfo() {
 
     printf("[NVM MGR]\tregister_threadinfo\n");
     if (pmblock == nullptr) {
-        pmblock = new PMBlockAllocator(get_nvm_mgr());
+        pmblock = new PMBlockAllocator(get_nvm_mgr(1));
+        pmblock1 = new PMBlockAllocator(get_nvm_mgr(56));
         std::cout << "[THREAD]\tfirst new pmblock\n";
     }
     if (epoch_mgr == nullptr) {
@@ -241,14 +252,14 @@ void register_threadinfo() {
         std::cout << "[THREAD]\tfirst new epoch_mgr and add global epoch\n";
     }
     if (ti == nullptr) {
-        if (tid == NVMMgr::max_threads) {
-            std::cout << "[THREAD]\tno available threadinfo to allocate\n";
-            assert(0);
-        }
-        NVMMgr *mgr = get_nvm_mgr();
+        // if (tid == NVMMgr::max_threads) {
+        //     std::cout << "[THREAD]\tno available threadinfo to allocate\n";
+        //     assert(0);
+        // }
+        NVMMgr *mgr = get_nvm_mgr(workerid);
 
         void *addr = mgr->alloc_thread_info();
-        ti = new (addr) thread_info();
+        ti = new (addr) thread_info(workerid);
         std::cout << "[THREAD]\tthreadinfo " << ti << "\n";
         ti->next = ti_list_head;
         ti_list_head = ti;

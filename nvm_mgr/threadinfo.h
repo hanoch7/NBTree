@@ -42,6 +42,7 @@ class thread_info {
     volatile int _lock;
     thread_info *next;
     buddy_allocator *free_list;
+	int workerid;
 
     // epoch based GC metadata
     GCMetaData *md;
@@ -49,7 +50,7 @@ class thread_info {
     ThreadLog static_log[log_length];
   public:
     // interface
-    thread_info();
+    thread_info(int workerid);
     ~thread_info();
 
     void AddGarbageNode(void *node_p);
@@ -73,7 +74,7 @@ uint64_t total(int thread_num);
 uint64_t get_threadlocal_generation();
 #endif
 
-void register_threadinfo();
+void register_threadinfo(int workerid);
 void unregister_threadinfo();
 
 void *get_threadinfo();
