@@ -28,11 +28,13 @@
 #endif
 
 char *thread_space_start_addr;
+// char *thread_space_start_addr2;
 __thread char *start_addr;
 __thread char *curr_addr;
 uint64_t allocate_size = 113ULL * 1024ULL * 1024ULL * 1024ULL;
 
 char *thread_mem_start_addr;
+// char *thread_mem_start_addr2;
 __thread char *start_mem;
 __thread char *curr_mem;
 uint64_t allocate_mem = 113ULL * 1024ULL * 1024ULL * 1024ULL;
@@ -138,16 +140,27 @@ public:
 	{
 		long long lat;
 		nsTimer clk;
+		// if (workerid < 56) {
 		start_mem = thread_mem_start_addr + workerid * MEM_PER_THREAD;
 		curr_mem = start_mem;
+		// }else {
+		// 	start_mem = thread_mem_start_addr2 + (workerid-56) * MEM_PER_THREAD;
+		// 	curr_mem = start_mem;
+		// }
 		Benchmark *benchmark = getBenchmark(conf, workerid);
 		#ifdef USE_NVM_MALLOC
 			NVMMgr_ns::register_threadinfo();
 		#else // TODO: 代码逻辑
 			#ifdef PMEM
 			#else
+			// if (workerid < 56) {
 			start_addr = thread_space_start_addr + workerid * SPACE_PER_THREAD;
 			curr_addr = start_addr;
+			// } else {
+			// 	start_addr = thread_space_start_addr2 + (workerid-56) * SPACE_PER_THREAD;
+			// 	curr_addr = start_addr;
+			// }
+			
 			if (conf.benchmark == INSERT_ONLY || conf.benchmark == UPSERT)
 			{
 				memset(start_addr, 0, SPACE_PER_THREAD);
@@ -156,7 +169,11 @@ public:
 			#endif
 		#endif
 
+		// if (workerid < 56) {
 		stick_this_thread_to_core(workerid * 2 + 1);
+		// } else {
+		// 	stick_this_thread_to_core((workerid-56) * 2);
+		// }
 		printf("[WORKER]\thello, I am worker %d\n", workerid);
 		bar->wait();
 
@@ -211,6 +228,7 @@ public:
   		Allocator::Initialize(pool_name, (size_t)1024ul * 1024ul * 1024ul * 10ul);
 	#else
 		// Create memory pool
+		// stick_this_thread_to_core(1);
 		int fd = open("/mnt/pmem1/btree", O_RDWR);
 		if (fd < 0)
 		{
@@ -227,6 +245,27 @@ public:
 		start_addr = (char *)pmem;
 		curr_addr = start_addr;
 		thread_space_start_addr = (char *)pmem + SPACE_OF_MAIN_THREAD;
+
+		// if (conf.num_threads > 56){
+		// // numa node 0 space
+		// stick_this_thread_to_core(0);
+		// int fd2 = open("/mnt/pmem0/btree", O_RDWR);
+		// if (fd2 < 0){
+		// 	printf("[NVM MGR]\tfailed to open nvm file 0\n");
+		// 	exit(-1);
+		// }
+		// if (ftruncate(fd2, allocate_size) < 0){
+		// 	printf("[NVM MGR]\tfailed to truncate file\n");
+		// 	exit(-1);
+		// }
+
+		// void* pmem2 = mmap((void *)0x50000000, allocate_size, PROT_READ|PROT_WRITE, MAP_SHARED, fd2, 0);
+		// memset(pmem2, 0, SPACE_OF_MAIN_THREAD);
+		// char *start_addr2 = (char *)pmem2;
+		// thread_space_start_addr2 = (char *)pmem2 + SPACE_OF_MAIN_THREAD;
+		// void *mem2 = new char[allocate_mem];
+		// thread_mem_start_addr2 = (char *)mem2 + MEM_OF_MAIN_THREAD;
+		// }
 	#endif
 #endif
 		void *mem = new char[allocate_mem];
