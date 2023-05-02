@@ -589,6 +589,9 @@ public:
           NVMMgr_ns::MarkNodeGarbage((void*)leaf->data);
           NVMMgr_ns::ResetLog((void*)leaf->data);
           #endif
+          #ifdef PMEM
+          Allocator::Free((void*)leaf->data);
+          #endif
         }
         l.release();
       }
@@ -656,6 +659,9 @@ public:
             NVMMgr_ns::MarkNodeGarbage((void*)leaf->data);
             NVMMgr_ns::ResetLog((void*)leaf->data);
             #endif
+            #ifdef PMEM
+            Allocator::Free((void*)leaf->data);
+            #endif
           }
           l.release();
         }
@@ -671,6 +677,9 @@ public:
             #ifdef USE_NVM_MALLOC
             NVMMgr_ns::MarkNodeGarbage((void*)leaf->data);
             NVMMgr_ns::ResetLog((void*)leaf->data);
+            #endif
+            #ifdef PMEM
+            Allocator::Free((void*)leaf->data);
             #endif
           }
           l.release();

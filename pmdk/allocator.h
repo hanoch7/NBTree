@@ -39,7 +39,7 @@ struct Allocator {
               << std::dec << std::endl;
   }
 
-  static void Allocate(void** ptr, size_t size) {
+  static void Allocate(void** ptr, size_t size) {//
     // std::cout<<"here\n";
     PMEMoid pm=OID_NULL;
     auto callback = [](PMEMobjpool *pool, void *ptr, void *arg) {
