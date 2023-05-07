@@ -22,7 +22,7 @@
 ## RUN
 ### Options
 ```
-    -b: Benchmark (0:Search 1:Insert 2:Update 3:Delete 4:YCSB(Update) 5:YCSB(Upsert), Default: 1)
+    -b: Benchmark (0:Search 1:Insert 2:Update 3:Delete 4:YCSB(Update) 5:YCSB(Upsert) 6:Insert&Delete, Default: 1)
     -n: Threads (Default: 1)
     -w: Key access distribution (0: Random, 1: Zipfian, Default: 0)
     -S: Skewness (Default: 0.99)
